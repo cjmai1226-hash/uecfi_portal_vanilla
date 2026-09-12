@@ -1,0 +1,76 @@
+name: uecfi_portal_vanilla
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+  sqflite: ^2.4.1
+  sqflite_common_ffi: ^2.3.4+4
+  path: ^1.9.1
+  firebase_core: ^3.12.1
+  cloud_firestore: ^5.6.5
+  firebase_auth: ^5.5.1
+  cached_network_image: ^3.4.1
+  intl: ^0.20.2
+  philippines_rpcmb: ^0.0.3
+  image_picker: ^1.2.3
+  crop_your_image: ^1.1.0
+  file_picker: ^8.1.6
+  shared_preferences: ^2.3.5
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/uecfi_pmm_logo.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/uecfi_pmm_logo.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/forms/
+    - assets/db/
+    - assets/fonts/
+  fonts:
+    - family: Graphik
+      fonts:
+        - asset: assets/fonts/Graphik-Light-Trial.otf
+          weight: 300
+        - asset: assets/fonts/Graphik-Regular-Trial.otf
+          weight: 400
+        - asset: assets/fonts/Graphik-RegularItalic-Trial.otf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Graphik-Medium-Trial.otf
+          weight: 500
+        - asset: assets/fonts/Graphik-MediumItalic-Trial.otf
+          weight: 500
+          style: italic
+        - asset: assets/fonts/Graphik-Semibold-Trial.otf
+          weight: 600
+        - asset: assets/fonts/Graphik-SemiboldItalic-Trial.otf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/Graphik-Bold-Trial.otf
+          weight: 700
+        - asset: assets/fonts/Graphik-BoldItalic-Trial.otf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/Graphik-Black-Trial.otf
+          weight: 900
+
