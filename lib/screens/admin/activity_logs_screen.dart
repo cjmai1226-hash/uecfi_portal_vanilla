@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import '../models/activity_log.dart';
-import '../models/member.dart';
-import '../services/firestore_service.dart';
+import '../../models/activity_log.dart';
+import '../../models/member.dart';
+import '../../services/firestore_service.dart';
 
 class ActivityLogsScreen extends StatefulWidget {
   const ActivityLogsScreen({super.key});

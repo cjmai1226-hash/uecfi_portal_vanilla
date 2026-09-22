@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -5,6 +6,7 @@ import '../models/activity_log.dart';
 import '../models/member.dart';
 import '../models/post.dart';
 import '../models/transfer_request.dart';
+import '../utils/image_utils.dart';
 
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();
@@ -121,6 +123,27 @@ class FirestoreService {
     }
   }
 
+  /// Get a single member by document ID or member ID
+  Future<Member?> getMemberById(String idOrDocId) async {
+    try {
+      final doc = await _firestore.collection('members').doc(idOrDocId).get();
+      if (doc.exists) {
+        return Member.fromFirestore(doc);
+      }
+      final query = await _firestore
+          .collection('members')
+          .where('memberId', isEqualTo: idOrDocId)
+          .limit(1)
+          .get();
+      if (query.docs.isNotEmpty) {
+        return Member.fromFirestore(query.docs.first);
+      }
+    } catch (e) {
+      debugPrint('Error getting member by id: $e');
+    }
+    return null;
+  }
+
   /// Helper to resolve current authenticated actor details
   Future<Map<String, String>> _getActorInfo() async {
     final user = _auth.currentUser;
@@ -161,10 +184,40 @@ class FirestoreService {
     }
   }
 
+  Future<Map<String, dynamic>> _sanitizeMemberPayload(
+      Map<String, dynamic> payload) async {
+    final clean = Map<String, dynamic>.from(payload);
+    for (final key in ['profileUrl', 'signatureUrl']) {
+      if (clean[key] is String) {
+        final str = (clean[key] as String).trim();
+        if (str.startsWith('data:image') &&
+            ImageUtils.estimateBase64SizeBytes(str) >
+                ImageUtils.maxPhotoBytes) {
+          try {
+            final raw = str.contains(',') ? str.split(',').last : str;
+            final decoded = base64Decode(raw);
+            final compressed = key == 'profileUrl'
+                ? await ImageUtils.compressProfilePhoto(decoded)
+                : await ImageUtils.compressSignature(decoded);
+            clean[key] = ImageUtils.toDataUrl(
+              compressed,
+              mimeType: key == 'profileUrl' ? 'image/jpeg' : 'image/png',
+            );
+          } catch (err) {
+            debugPrint(
+                'Error auto-compressing $key in firestore payload: $err');
+          }
+        }
+      }
+    }
+    return clean;
+  }
+
   /// Add a new Member document to Firestore and automatically log the activity
   Future<String> addMember(Member member, {String? customActorName}) async {
     try {
-      final docRef = await _firestore.collection('members').add(member.toMap());
+      final payload = await _sanitizeMemberPayload(member.toMap());
+      final docRef = await _firestore.collection('members').add(payload);
 
       // Record activity log with exact requested schema
       try {
@@ -194,15 +247,35 @@ class FirestoreService {
     }
   }
 
-  /// Update an existing Member document in Firestore and automatically log the activity
+  /// Update an existing Member document in Firestore and automatically log the activity.
+  /// If [originalMember] is provided, only the modified fields are sent in the Firestore payload,
+  /// avoiding unnecessary re-uploading of untouched pictures or signatures.
   Future<void> updateMember(
     Member member, {
+    Member? originalMember,
     String? customDetails,
     String? customActorName,
   }) async {
     try {
+      final Map<String, dynamic> updatePayload;
+      if (originalMember != null) {
+        final diff = member.diffFrom(originalMember);
+        if (diff.isEmpty) {
+          debugPrint('No fields modified for member ${member.memberId}. Skipping Firestore write.');
+          return;
+        }
+        updatePayload = diff;
+      } else {
+        updatePayload = member.toMap();
+      }
+
+      final cleanPayload = await _sanitizeMemberPayload(updatePayload);
+
       if (member.id.isNotEmpty) {
-        await _firestore.collection('members').doc(member.id).update(member.toMap());
+        await _firestore
+            .collection('members')
+            .doc(member.id)
+            .update(cleanPayload);
       } else {
         final snapshot = await _firestore
             .collection('members')
@@ -210,20 +283,28 @@ class FirestoreService {
             .limit(1)
             .get();
         if (snapshot.docs.isNotEmpty) {
-          await snapshot.docs.first.reference.update(member.toMap());
+          await snapshot.docs.first.reference.update(cleanPayload);
         }
       }
 
       // Record activity log with exact requested schema
       try {
         final actor = await _getActorInfo();
+        final changedFieldNames = originalMember != null
+            ? member.diffFrom(originalMember).keys.where((k) => k != 'updatedAt').join(', ')
+            : '';
+        final details = customDetails ??
+            (changedFieldNames.isNotEmpty
+                ? 'Updated ($changedFieldNames) for ${member.fullName} (${member.memberId})'
+                : 'Updated profile for ${member.fullName} (${member.memberId})');
+
         await logActivity(
           ActivityLog(
             id: '',
             action: 'UPDATE_MEMBER',
             area: member.area,
             center: member.center,
-            description: customDetails ?? 'Updated profile for ${member.fullName} (${member.memberId})',
+            description: details,
             district: member.district.isNotEmpty ? member.district : 'District 3',
             performedByName: customActorName ?? actor['name']!,
             performedByUid: actor['uid']!,
@@ -236,6 +317,50 @@ class FirestoreService {
       }
     } catch (e) {
       debugPrint('Error updating member: $e');
+      rethrow;
+    }
+  }
+
+  /// Update Member role and automatically log the activity
+  Future<void> updateMemberRole({
+    required String docId,
+    required String role,
+    String? memberName,
+    String? memberId,
+    String? area,
+    String? center,
+    String? district,
+  }) async {
+    try {
+      final normalizedRole = role.toLowerCase().trim();
+      await _firestore.collection('members').doc(docId).update({
+        'role': normalizedRole,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+
+      // Record activity log
+      try {
+        final actor = await _getActorInfo();
+        final name = memberName ?? 'member';
+        await logActivity(
+          ActivityLog(
+            id: '',
+            action: 'UPDATE_ROLE',
+            area: area ?? '',
+            center: center ?? '',
+            description: 'Assigned role "$normalizedRole" to $name${memberId != null ? " ($memberId)" : ""}',
+            district: district?.isNotEmpty == true ? district! : 'District 3',
+            performedByName: actor['name']!,
+            performedByUid: actor['uid']!,
+            role: actor['role']!,
+            timestamp: DateTime.now(),
+          ),
+        );
+      } catch (logErr) {
+        debugPrint('Activity log error on update role: $logErr');
+      }
+    } catch (e) {
+      debugPrint('Error updating member role: $e');
       rethrow;
     }
   }
@@ -293,11 +418,8 @@ class FirestoreService {
     return query.snapshots().map((snapshot) {
       final posts = snapshot.docs.map((doc) => Post.fromFirestore(doc)).toList();
 
-      // Sort: pinned posts first, then descending by createdAt
+      // Sort: descending by createdAt (newest first)
       posts.sort((a, b) {
-        if (a.isPinned != b.isPinned) {
-          return a.isPinned ? -1 : 1;
-        }
         try {
           final dateA = DateTime.tryParse(a.createdAt) ?? DateTime(2000);
           final dateB = DateTime.tryParse(b.createdAt) ?? DateTime(2000);

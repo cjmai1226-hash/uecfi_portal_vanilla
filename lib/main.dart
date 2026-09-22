@@ -1,8 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'firebase_options.dart';
-import 'screens/login_screen.dart';
-import 'screens/main_navigation_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/home/main_navigation_screen.dart';
 import 'services/auth_service.dart';
 import 'theme/theme.dart';
 

@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import '../theme/theme.dart';
+import '../../services/auth_service.dart';
+import '../../theme/theme.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onAuthenticated;

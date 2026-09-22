@@ -6,9 +6,11 @@ class TransferRequest {
   final String memberId;
   final String memberName;
   final String fromCenter;
+  final String fromCenterAddress;
   final String fromArea;
   final String fromDistrict;
   final String toCenter;
+  final String toCenterAddress;
   final String toArea;
   final String toDistrict;
   final String reason;
@@ -27,9 +29,11 @@ class TransferRequest {
     required this.memberId,
     required this.memberName,
     required this.fromCenter,
+    this.fromCenterAddress = '',
     required this.fromArea,
     required this.fromDistrict,
     required this.toCenter,
+    this.toCenterAddress = '',
     required this.toArea,
     required this.toDistrict,
     required this.reason,
@@ -53,9 +57,11 @@ class TransferRequest {
     String? memberId,
     String? memberName,
     String? fromCenter,
+    String? fromCenterAddress,
     String? fromArea,
     String? fromDistrict,
     String? toCenter,
+    String? toCenterAddress,
     String? toArea,
     String? toDistrict,
     String? reason,
@@ -74,9 +80,11 @@ class TransferRequest {
       memberId: memberId ?? this.memberId,
       memberName: memberName ?? this.memberName,
       fromCenter: fromCenter ?? this.fromCenter,
+      fromCenterAddress: fromCenterAddress ?? this.fromCenterAddress,
       fromArea: fromArea ?? this.fromArea,
       fromDistrict: fromDistrict ?? this.fromDistrict,
       toCenter: toCenter ?? this.toCenter,
+      toCenterAddress: toCenterAddress ?? this.toCenterAddress,
       toArea: toArea ?? this.toArea,
       toDistrict: toDistrict ?? this.toDistrict,
       reason: reason ?? this.reason,
@@ -119,9 +127,11 @@ class TransferRequest {
       memberId: map['memberId']?.toString() ?? '',
       memberName: map['memberName']?.toString() ?? '',
       fromCenter: map['fromCenter']?.toString() ?? '',
+      fromCenterAddress: map['fromCenterAddress']?.toString() ?? '',
       fromArea: map['fromArea']?.toString() ?? '',
       fromDistrict: map['fromDistrict']?.toString() ?? 'District 3',
       toCenter: map['toCenter']?.toString() ?? '',
+      toCenterAddress: map['toCenterAddress']?.toString() ?? '',
       toArea: map['toArea']?.toString() ?? '',
       toDistrict: map['toDistrict']?.toString() ?? 'District 3',
       reason: map['reason']?.toString() ?? '',
@@ -142,9 +152,11 @@ class TransferRequest {
       'memberId': memberId,
       'memberName': memberName,
       'fromCenter': fromCenter,
+      'fromCenterAddress': fromCenterAddress,
       'fromArea': fromArea,
       'fromDistrict': fromDistrict,
       'toCenter': toCenter,
+      'toCenterAddress': toCenterAddress,
       'toArea': toArea,
       'toDistrict': toDistrict,
       'reason': reason,

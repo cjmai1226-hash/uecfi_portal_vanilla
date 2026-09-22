@@ -28,13 +28,7 @@ class ActivityLog {
 
   String get actionDisplayName {
     final act = action.toUpperCase();
-    if (act.contains('TRANSFER_MEMBER') || act == 'TRANSFER') {
-      return 'Member Transferred';
-    } else if (act.contains('REJECT_TRANSFER')) {
-      return 'Transfer Rejected';
-    } else if (act.contains('REQUEST_TRANSFER')) {
-      return 'Transfer Requested';
-    } else if (act.contains('ADD') || act.contains('CREATE')) {
+    if (act.contains('ADD') || act.contains('CREATE')) {
       return 'Member Added';
     } else if (act.contains('UPDATE') || act.contains('EDIT')) {
       return 'Member Updated';
@@ -46,13 +40,7 @@ class ActivityLog {
 
   Color get actionColor {
     final act = action.toUpperCase();
-    if (act.contains('TRANSFER_MEMBER') || act == 'TRANSFER') {
-      return const Color(0xFF00B0FF); // Cyan / Blue
-    } else if (act.contains('REJECT_TRANSFER')) {
-      return const Color(0xFFFF5252); // Red Accent
-    } else if (act.contains('REQUEST_TRANSFER')) {
-      return const Color(0xFFFF9100); // Amber / Orange
-    } else if (act.contains('ADD') || act.contains('CREATE')) {
+    if (act.contains('ADD') || act.contains('CREATE')) {
       return const Color(0xFF00C853); // Emerald Green
     } else if (act.contains('UPDATE') || act.contains('EDIT')) {
       return const Color(0xFFA100FF); // Electric Violet
@@ -64,13 +52,7 @@ class ActivityLog {
 
   IconData get actionIcon {
     final act = action.toUpperCase();
-    if (act.contains('TRANSFER_MEMBER') || act == 'TRANSFER') {
-      return Icons.swap_horiz_rounded;
-    } else if (act.contains('REJECT_TRANSFER')) {
-      return Icons.cancel_outlined;
-    } else if (act.contains('REQUEST_TRANSFER')) {
-      return Icons.pending_actions_rounded;
-    } else if (act.contains('ADD') || act.contains('CREATE')) {
+    if (act.contains('ADD') || act.contains('CREATE')) {
       return Icons.person_add_rounded;
     } else if (act.contains('UPDATE') || act.contains('EDIT')) {
       return Icons.edit_note_rounded;

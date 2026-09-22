@@ -199,12 +199,38 @@ class _StatsFilterBottomSheetState extends State<StatsFilterBottomSheet> {
       return matchDistrict && matchArea;
     }).toList();
 
+    // Check duplicate center names across allCenters
+    final Map<String, int> nameCounts = {};
+    for (final c in widget.allCenters) {
+      final name = c.centerName.trim().toLowerCase();
+      if (name.isNotEmpty) {
+        nameCounts[name] = (nameCounts[name] ?? 0) + 1;
+      }
+    }
+
+    String getCenterLabel(CenterModel c) {
+      final isDuplicate = (nameCounts[c.centerName.trim().toLowerCase()] ?? 0) > 1;
+      if (isDuplicate) {
+        return c.displayNameWithAddress;
+      }
+      return c.centerName.trim();
+    }
+
     final List<String> centerOptions = (isCenterLocked && widget.currentMember != null)
-        ? [widget.currentMember!.center]
+        ? [
+            () {
+              final matching = widget.allCenters
+                  .where((c) => c.matchesMember(widget.currentMember!, widget.allCenters))
+                  .firstOrNull;
+              return matching != null
+                  ? getCenterLabel(matching)
+                  : widget.currentMember!.center;
+            }()
+          ]
         : [
             'All Local Centers',
             ...filteredForCenter
-                .map((c) => c.centerName.trim())
+                .map((c) => getCenterLabel(c))
                 .where((n) => n.isNotEmpty)
                 .toSet()
                 .toList()
@@ -307,7 +333,12 @@ class _StatsFilterBottomSheetState extends State<StatsFilterBottomSheet> {
               label: 'Local Center',
               value: centerOptions.contains(_selectedCenter)
                   ? _selectedCenter
-                  : centerOptions.first,
+                  : centerOptions.firstWhere(
+                      (opt) =>
+                          opt.toLowerCase().startsWith(_selectedCenter.toLowerCase()) ||
+                          _selectedCenter.toLowerCase().startsWith(opt.toLowerCase()),
+                      orElse: () => centerOptions.first,
+                    ),
               items: centerOptions,
               isDark: isDark,
               primaryColor: primaryColor,

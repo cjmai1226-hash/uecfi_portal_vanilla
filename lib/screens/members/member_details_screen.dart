@@ -1,14 +1,12 @@
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../models/member.dart';
-import '../models/transfer_request.dart';
-import '../services/firestore_service.dart';
-import '../widgets/transfer_history_sheet.dart';
+import '../../models/member.dart';
+import '../../models/transfer_request.dart';
+import '../../services/firestore_service.dart';
 import 'add_member_screen.dart';
-import 'transfer_request_screen.dart';
+import '../transfers/transfer_request_screen.dart';
 
 class MemberDetailsScreen extends StatefulWidget {
   final Member member;
@@ -43,17 +41,6 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
         }
       }).catchError((_) {});
     }
-  }
-
-  Future<void> _refreshMember() async {
-    try {
-      final doc = await FirebaseFirestore.instance.collection('members').doc(_currentMember.id).get();
-      if (doc.exists && mounted) {
-        setState(() {
-          _currentMember = Member.fromFirestore(doc);
-        });
-      }
-    } catch (_) {}
   }
 
   void _confirmDeleteMember(BuildContext context) {
@@ -292,6 +279,69 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
     );
   }
 
+  bool _canEditMember(Member? loggedInMember, Member member) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final userRole = loggedInMember?.role.toLowerCase() ?? 'admin';
+    final isAdmin = userRole == 'admin';
+
+    final isSelf = (loggedInMember != null &&
+            (member.id == loggedInMember.id ||
+                member.memberId == loggedInMember.memberId)) ||
+        (currentUser?.email != null &&
+            member.email.trim().toLowerCase() ==
+                currentUser!.email!.trim().toLowerCase());
+
+    final isDistrictMatch = loggedInMember != null &&
+        loggedInMember.district.isNotEmpty &&
+        loggedInMember.district.toLowerCase() ==
+            member.district.toLowerCase();
+
+    final isAreaMatch = isDistrictMatch &&
+        loggedInMember.area.isNotEmpty &&
+        loggedInMember.area.toLowerCase() == member.area.toLowerCase();
+
+    final isCenterMatch = isAreaMatch &&
+        loggedInMember.center.isNotEmpty &&
+        loggedInMember.center.toLowerCase() == member.center.toLowerCase();
+
+    if (isAdmin) {
+      return true;
+    } else if (userRole == 'district') {
+      return isDistrictMatch;
+    } else if (userRole == 'area') {
+      return isAreaMatch;
+    } else if (userRole == 'local') {
+      return isCenterMatch;
+    } else {
+      return isSelf;
+    }
+  }
+
+  Future<void> _handleEditMember() async {
+    final updated = await Navigator.of(context).push<Member>(
+      MaterialPageRoute(
+        builder: (_) => AddMemberScreen(memberToEdit: _currentMember),
+      ),
+    );
+    if (updated != null && mounted) {
+      setState(() {
+        _currentMember = updated;
+      });
+    }
+  }
+
+  Future<void> _refreshMember() async {
+    final docId = _currentMember.id.isNotEmpty ? _currentMember.id : _currentMember.memberId;
+    if (docId.isNotEmpty) {
+      final updated = await FirestoreService().getMemberById(docId);
+      if (updated != null && mounted) {
+        setState(() {
+          _currentMember = updated;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final member = _currentMember;
@@ -319,14 +369,8 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
             stream: FirestoreService().getCurrentMemberStream(),
             builder: (context, snapshot) {
               final loggedInMember = snapshot.data;
-              final currentUser = FirebaseAuth.instance.currentUser;
               final userRole = loggedInMember?.role.toLowerCase() ?? 'admin';
               final isAdmin = userRole == 'admin';
-
-              final isSelf = (loggedInMember != null &&
-                      (member.id == loggedInMember.id || member.memberId == loggedInMember.memberId)) ||
-                  (currentUser?.email != null &&
-                      member.email.trim().toLowerCase() == currentUser!.email!.trim().toLowerCase());
 
               final isDistrictMatch = loggedInMember != null &&
                   loggedInMember.district.isNotEmpty &&
@@ -340,56 +384,19 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                   loggedInMember.center.isNotEmpty &&
                   loggedInMember.center.toLowerCase() == member.center.toLowerCase();
 
-              bool canEdit = false;
-              if (isAdmin) {
-                canEdit = true;
-              } else if (userRole == 'district') {
-                canEdit = isDistrictMatch;
-              } else if (userRole == 'area') {
-                canEdit = isAreaMatch;
-              } else if (userRole == 'local') {
-                canEdit = isCenterMatch;
-              } else {
-                // Regular member
-                canEdit = isSelf;
-              }
-
               final canDelete = isAdmin ||
                   (userRole == 'district' && isDistrictMatch) ||
                   (userRole == 'area' && isAreaMatch) ||
                   (userRole == 'local' && isCenterMatch);
 
-              if (!canEdit && !canDelete) {
+              if (!canDelete) {
                 return const SizedBox(width: 8);
               }
 
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (canEdit)
-                    IconButton(
-                      icon: const Icon(Icons.edit_rounded, size: 20),
-                      tooltip: 'Edit Profile',
-                      onPressed: () async {
-                        final updated = await Navigator.of(context).push<Member>(
-                          MaterialPageRoute(
-                            builder: (_) => AddMemberScreen(memberToEdit: _currentMember),
-                          ),
-                        );
-                        if (updated != null && mounted) {
-                          setState(() {
-                            _currentMember = updated;
-                          });
-                        }
-                      },
-                    ),
-                  if (canDelete)
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, size: 20, color: Color(0xFFFF2A55)),
-                      tooltip: 'Delete Record',
-                      onPressed: () => _confirmDeleteMember(context),
-                    ),
-                ],
+              return IconButton(
+                icon: const Icon(Icons.delete_outline_rounded, size: 20, color: Color(0xFFFF2A55)),
+                tooltip: 'Delete Record',
+                onPressed: () => _confirmDeleteMember(context),
               );
             },
           ),
@@ -583,9 +590,222 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                         ),
                       ],
                     ),
+                    if (isInactive) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4.5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(
+                            alpha: isDark ? 0.2 : 0.12,
+                          ),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: Colors.amber.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.info_outline_rounded,
+                              size: 14,
+                              color: Colors.amber,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                member.inactiveReason.isNotEmpty
+                                    ? 'Reason: ${member.inactiveReason}'
+                                    : 'Please indicate reason for inactivity',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark
+                                      ? Colors.amber.shade200
+                                      : Colors.amber.shade900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
+            ),
+
+            // XL Action Buttons below header card (Edit & Transfer Request)
+            StreamBuilder<Member?>(
+              stream: FirestoreService().getCurrentMemberStream(),
+              builder: (context, snapshot) {
+                final loggedInMember = snapshot.data;
+                final canEdit = _canEditMember(loggedInMember, member);
+                if (!canEdit) {
+                  return const SizedBox.shrink();
+                }
+
+                return StreamBuilder<TransferRequest?>(
+                  stream: FirestoreService().getPendingTransferStream(
+                    member.id.isNotEmpty ? member.id : member.memberId,
+                  ),
+                  builder: (context, transferSnap) {
+                    final pendingRequest = transferSnap.data;
+                    final hasPending = pendingRequest != null;
+
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Row(
+                            children: [
+                              // Edit Profile Button
+                              Expanded(
+                                child: SizedBox(
+                                  height: 52,
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: primaryColor,
+                                      foregroundColor: Colors.white,
+                                      elevation: 1.5,
+                                      shadowColor: primaryColor.withValues(alpha: 0.3),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                    ),
+                                    onPressed: _handleEditMember,
+                                    icon: const Icon(Icons.edit_rounded, size: 20),
+                                    label: const Text(
+                                      'Edit Member Profile',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              // Request Transfer Button (Icon only)
+                              SizedBox(
+                                width: 52,
+                                height: 52,
+                                child: Tooltip(
+                                  message: hasPending
+                                      ? 'Transfer Pending Approval'
+                                      : 'Request Center Transfer',
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      padding: EdgeInsets.zero,
+                                      backgroundColor: hasPending
+                                          ? (isDark ? const Color(0xFF332617) : const Color(0xFFFFF8E1))
+                                          : (isDark ? const Color(0xFF2A2218) : const Color(0xFFFFF3E0)),
+                                      foregroundColor: hasPending
+                                          ? const Color(0xFFFF9100)
+                                          : const Color(0xFFE65100),
+                                      elevation: 1.5,
+                                      shadowColor: Colors.orange.withValues(alpha: 0.25),
+                                      side: BorderSide(
+                                        color: (hasPending ? const Color(0xFFFF9100) : Colors.orange)
+                                            .withValues(alpha: isDark ? 0.45 : 0.6),
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                    ),
+                                    onPressed: () async {
+                                      if (hasPending) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Transfer to ${pendingRequest.toCenter} is currently pending District Admin approval.',
+                                            ),
+                                            backgroundColor: const Color(0xFFFF9100),
+                                            behavior: SnackBarBehavior.floating,
+                                          ),
+                                        );
+                                        return;
+                                      }
+                                      final transferred = await Navigator.of(context).push<bool>(
+                                        MaterialPageRoute(
+                                          builder: (_) => TransferRequestScreen(member: member),
+                                        ),
+                                      );
+                                      if (transferred == true) {
+                                        _refreshMember();
+                                      }
+                                    },
+                                    child: Icon(
+                                      hasPending
+                                          ? Icons.hourglass_top_rounded
+                                          : Icons.swap_horiz_rounded,
+                                      size: 24,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Pending Transfer Alert Banner
+                        if (hasPending) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(13),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF9100).withValues(alpha: isDark ? 0.16 : 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFFF9100).withValues(alpha: 0.45),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.pending_actions_rounded,
+                                  color: Color(0xFFFF9100),
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        pendingRequest.toCenterAddress.isNotEmpty
+                                            ? 'Pending Transfer to ${pendingRequest.toCenter} (${pendingRequest.toCenterAddress})'
+                                            : 'Pending Transfer to ${pendingRequest.toCenter}',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFFF9100),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Reason: "${pendingRequest.reason}" • Awaiting District Admin approval',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          color: isDark ? Colors.white70 : Colors.black87,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
+                );
+              },
             ),
 
             const SizedBox(height: 14),
@@ -719,8 +939,72 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
               ),
             ],
 
-            // Profile Completeness & Missing Fields Banner
-            if (!member.isProfileComplete)
+            // Profile Status & Completeness Banner
+            if (isInactive)
+              Container(
+                margin: const EdgeInsets.only(bottom: 18),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: member.inactiveReason.trim().isEmpty
+                      ? Colors.amber.withValues(alpha: isDark ? 0.16 : 0.10)
+                      : (isDark ? const Color(0xFF262633) : const Color(0xFFF3F3F7)),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: member.inactiveReason.trim().isEmpty
+                        ? Colors.amber.withValues(alpha: 0.5)
+                        : (isDark ? const Color(0xFF3B3B4F) : const Color(0xFFDCDCE5)),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      member.inactiveReason.trim().isEmpty
+                          ? Icons.warning_amber_rounded
+                          : Icons.info_outline_rounded,
+                      color: member.inactiveReason.trim().isEmpty
+                          ? Colors.amber.shade800
+                          : (isDark ? Colors.white70 : Colors.black87),
+                      size: 22,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            member.inactiveReason.trim().isEmpty
+                                ? 'INACTIVE MEMBER • REASON REQUIRED'
+                                : 'INACTIVE MEMBER RECORD',
+                            style: TextStyle(
+                              color: member.inactiveReason.trim().isEmpty
+                                  ? Colors.amber.shade800
+                                  : (isDark ? Colors.white : Colors.black87),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            member.inactiveReason.trim().isEmpty
+                                ? 'Please indicate why this member is inactive. Edit the member profile to select a reason for inactivity.'
+                                : 'Reason for Inactivity: ${member.inactiveReason}',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: member.inactiveReason.trim().isEmpty
+                                  ? FontWeight.w500
+                                  : FontWeight.w600,
+                              color: isDark ? Colors.white70 : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (!member.isProfileComplete)
               Container(
                 margin: const EdgeInsets.only(bottom: 18),
                 padding: const EdgeInsets.all(16),
@@ -887,165 +1171,49 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
             const SizedBox(height: 18),
 
             // Section 2: Church & Affiliation
-            StreamBuilder<TransferRequest?>(
-              stream: FirestoreService().getPendingTransferStream(member.id),
-              builder: (context, pendingSnapshot) {
-                final pendingRequest = pendingSnapshot.data;
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            _buildSectionHeader('CHURCH & AFFILIATION', primaryColor),
+            const SizedBox(height: 10),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        _buildSectionHeader('CHURCH & AFFILIATION', primaryColor),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Transfer History Button
-                            TextButton.icon(
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              icon: const Icon(Icons.history_rounded, size: 15),
-                              label: const Text('History', style: TextStyle(fontSize: 12)),
-                              onPressed: () => TransferHistorySheet.show(context, member),
-                            ),
-                            const SizedBox(width: 4),
-                            // Request Transfer button or Pending badge
-                            if (pendingRequest != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFF9100).withValues(alpha: isDark ? 0.22 : 0.14),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: const Color(0xFFFF9100).withValues(alpha: 0.5)),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.hourglass_top_rounded, size: 13, color: Color(0xFFFF9100)),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Pending Transfer',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFFFF9100),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            else
-                              TextButton.icon(
-                                style: TextButton.styleFrom(
-                                  foregroundColor: primaryColor,
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                icon: const Icon(Icons.swap_horiz_rounded, size: 16),
-                                label: const Text(
-                                  'Transfer Center',
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                                ),
-                                onPressed: () async {
-                                  final transferred = await Navigator.of(context).push<bool>(
-                                    MaterialPageRoute(
-                                      builder: (_) => TransferRequestScreen(member: member),
-                                    ),
-                                  );
-                                  if (transferred == true) {
-                                    _refreshMember();
-                                  }
-                                },
-                              ),
-                          ],
-                        ),
-                      ],
+                    _buildProfileRow(
+                      context,
+                      icon: Icons.church_outlined,
+                      label: 'Local Center / Branch',
+                      value: member.center.isNotEmpty
+                          ? member.center
+                          : 'Antipolo Center',
                     ),
-                    const SizedBox(height: 10),
-
-                    // Pending Transfer Alert Banner if active
-                    if (pendingRequest != null) ...[
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF9100).withValues(alpha: isDark ? 0.15 : 0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFFF9100).withValues(alpha: 0.4)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.pending_actions_rounded, color: Color(0xFFFF9100), size: 22),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Pending Transfer to ${pendingRequest.toCenter}',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFFFF9100),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Reason: "${pendingRequest.reason}" • Awaiting District Admin verification',
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      color: isDark ? Colors.white70 : Colors.black87,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                    const Divider(height: 20),
+                    _buildProfileRow(
+                      context,
+                      icon: Icons.map_outlined,
+                      label: 'District & Area',
+                      value: '${member.district} • ${member.area}',
+                    ),
+                    const Divider(height: 20),
+                    _buildProfileRow(
+                      context,
+                      icon: Icons.calendar_today_outlined,
+                      label: 'Date Joined',
+                      value: member.formattedDateJoined,
+                    ),
+                    if (isInactive) ...[
+                      const Divider(height: 20),
+                      _buildProfileRow(
+                        context,
+                        icon: Icons.info_outline_rounded,
+                        label: 'Reason for Inactivity',
+                        value: member.inactiveReason.isNotEmpty
+                            ? member.inactiveReason
+                            : 'Please indicate reason for inactivity',
                       ),
                     ],
-
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            _buildProfileRow(
-                              context,
-                              icon: Icons.church_outlined,
-                              label: 'Local Center / Branch',
-                              value: member.center.isNotEmpty
-                                  ? member.center
-                                  : 'Antipolo Center',
-                            ),
-                            const Divider(height: 20),
-                            _buildProfileRow(
-                              context,
-                              icon: Icons.map_outlined,
-                              label: 'District & Area',
-                              value: '${member.district} • ${member.area}',
-                            ),
-                            const Divider(height: 20),
-                            _buildProfileRow(
-                              context,
-                              icon: Icons.calendar_today_outlined,
-                              label: 'Date Joined',
-                              value: member.formattedDateJoined,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   ],
-                );
-              },
+                ),
+              ),
             ),
 
             const SizedBox(height: 18),
@@ -1335,6 +1503,7 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
     required IconData icon,
     required String label,
     required String value,
+    Color? valueColor,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -1365,7 +1534,7 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w500,
-                  color: textPrimary,
+                  color: valueColor ?? textPrimary,
                 ),
               ),
             ],

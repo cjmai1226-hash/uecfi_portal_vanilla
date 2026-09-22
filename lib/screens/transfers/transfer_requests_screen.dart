@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/member.dart';
-import '../models/transfer_request.dart';
-import '../services/firestore_service.dart';
+import '../../models/member.dart';
+import '../../models/transfer_request.dart';
+import '../../services/firestore_service.dart';
 
 class TransferRequestsScreen extends StatefulWidget {
   const TransferRequestsScreen({super.key});
@@ -171,6 +171,23 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
                           request.fromCenter,
                           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textPrimary),
                         ),
+                        if (request.fromCenterAddress.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(Icons.location_on_outlined, size: 12, color: textSecondary),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  request.fromCenterAddress,
+                                  style: TextStyle(fontSize: 11.5, color: textSecondary),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         Text(
                           '${request.fromDistrict} • ${request.fromArea}',
                           style: TextStyle(fontSize: 12, color: textSecondary),
@@ -194,6 +211,23 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
                             color: Color(0xFF00B0FF),
                           ),
                         ),
+                        if (request.toCenterAddress.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on_outlined, size: 12, color: Color(0xFF00B0FF)),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  request.toCenterAddress,
+                                  style: const TextStyle(fontSize: 11.5, color: Color(0xFF00B0FF)),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         Text(
                           '${request.toDistrict} • ${request.toArea}',
                           style: TextStyle(fontSize: 12, color: textSecondary),
@@ -753,6 +787,13 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          if (request.fromCenterAddress.isNotEmpty)
+                            Text(
+                              request.fromCenterAddress,
+                              style: TextStyle(fontSize: 10.5, color: textSecondary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                         ],
                       ),
                     ),
@@ -778,6 +819,13 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          if (request.toCenterAddress.isNotEmpty)
+                            Text(
+                              request.toCenterAddress,
+                              style: const TextStyle(fontSize: 10.5, color: Color(0xFF00B0FF)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                         ],
                       ),
                     ),

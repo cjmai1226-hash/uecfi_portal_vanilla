@@ -1,15 +1,16 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../models/member.dart';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
-import '../theme/theme.dart';
-import '../widgets/legal_about_sheet.dart';
-import 'activity_logs_screen.dart';
+import '../../models/member.dart';
+import '../../services/auth_service.dart';
+import '../../services/firestore_service.dart';
+import '../../theme/theme.dart';
+import '../../widgets/legal_about_sheet.dart';
+import '../admin/activity_logs_screen.dart';
 import 'constitution_bylaws_screen.dart';
-import 'create_post_screen.dart';
+import '../posts/create_post_screen.dart';
 import 'forms_templates_screen.dart';
-import 'transfer_requests_screen.dart';
+import '../admin/role_management_screen.dart';
+import '../transfers/transfer_requests_screen.dart';
 
 class PortalMenuScreen extends StatelessWidget {
   const PortalMenuScreen({super.key});
@@ -352,7 +353,19 @@ class PortalMenuScreen extends StatelessWidget {
                     ),
                   ],
                   if (isAdmin) ...[
-                    if (canCreateDistrictPosts || canViewActivityLogs || canManageTransfers) _buildDivider(borderColor),
+                    if (canCreateDistrictPosts || canViewActivityLogs) _buildDivider(borderColor),
+                    _buildMenuItem(
+                      title: 'Role Management',
+                      subtitle: 'View administrative users and manage member roles',
+                      textPrimary: textPrimary,
+                      textSecondary: textSecondary,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const RoleManagementScreen()),
+                        );
+                      },
+                    ),
+                    _buildDivider(borderColor),
                     _buildMenuItem(
                       title: 'Data Management',
                       subtitle: 'Database sync, backups, and district data export',
@@ -499,13 +512,13 @@ class PortalMenuScreen extends StatelessWidget {
   }) {
     return ListTile(
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       title: Text(
         title,
         style: TextStyle(
           color: textPrimary,
-          fontSize: 15,
           fontWeight: FontWeight.w600,
+          fontSize: 14.5,
         ),
       ),
       subtitle: Text(
@@ -515,7 +528,6 @@ class PortalMenuScreen extends StatelessWidget {
           fontSize: 12.5,
         ),
       ),
-      // Trailing widget (badge) and chevron
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

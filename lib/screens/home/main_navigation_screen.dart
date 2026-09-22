@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../widgets/portal_app_bar.dart';
-import 'finance_screen.dart';
+import '../../widgets/portal_app_bar.dart';
+import '../finance/finance_screen.dart';
 import 'home_screen.dart';
-import 'members_directory_screen.dart';
-import 'stats_screen.dart';
+import '../members/members_directory_screen.dart';
+import '../stats/stats_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});

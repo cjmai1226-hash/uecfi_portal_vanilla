@@ -75,6 +75,7 @@ class Member {
   final String center;
   final List<MemberPosition> positions;
   final String membershipStatus;
+  final String inactiveReason;
   final String memberType;
   final String dateJoined;
   final String profileUrl;
@@ -108,6 +109,7 @@ class Member {
     required this.center,
     this.positions = const [],
     this.membershipStatus = 'Active',
+    this.inactiveReason = '',
     this.memberType = 'Regular',
     this.dateJoined = '',
     this.profileUrl = '',
@@ -142,6 +144,7 @@ class Member {
     String? center,
     List<MemberPosition>? positions,
     String? membershipStatus,
+    String? inactiveReason,
     String? memberType,
     String? dateJoined,
     String? profileUrl,
@@ -175,6 +178,7 @@ class Member {
       center: center ?? this.center,
       positions: positions ?? this.positions,
       membershipStatus: membershipStatus ?? this.membershipStatus,
+      inactiveReason: inactiveReason ?? this.inactiveReason,
       memberType: memberType ?? this.memberType,
       dateJoined: dateJoined ?? this.dateJoined,
       profileUrl: profileUrl ?? this.profileUrl,
@@ -193,9 +197,25 @@ class Member {
 
     if (mName.isNotEmpty) {
       final initial = mName[0].toUpperCase();
-      return '$fName $initial. $lName'.trim();
+      final res = '$fName $initial. $lName'.trim();
+      return res.isNotEmpty ? res : (isInactive ? 'Inactive Member' : 'Member');
     }
-    return '$fName $lName'.trim();
+    final res = '$fName $lName'.trim();
+    return res.isNotEmpty ? res : (isInactive ? 'Inactive Member' : 'Member');
+  }
+
+  /// Full Legal Name with full middle name included (e.g. Jonathan Santos Reyes)
+  String get fullNameWithMiddleName {
+    final fName = firstName.trim();
+    final lName = lastName.trim();
+    final mName = middleName.trim();
+
+    if (mName.isNotEmpty) {
+      final res = '$fName $mName $lName'.trim();
+      return res.isNotEmpty ? res : (isInactive ? 'Inactive Member' : 'Member');
+    }
+    final res = '$fName $lName'.trim();
+    return res.isNotEmpty ? res : (isInactive ? 'Inactive Member' : 'Member');
   }
 
   /// Primary position title (single unified string)
@@ -260,6 +280,7 @@ class Member {
 
   bool get canCreateDistrictPosts => isAdmin || isDistrictLeader;
   bool get canViewActivityLogs => isAdmin || isDistrictLeader;
+  bool get canViewRoleManagement => isAdmin;
   bool get canAddMembers => !isRegularMember;
   bool get canAssignRoles => isAdmin;
   bool get canAccessAdminTools => isAdmin || isDistrictLeader;
@@ -360,8 +381,37 @@ class Member {
     return '$prefix$seqStr';
   }
 
+  /// Checks if a middle name string is only an initial/abbreviation (e.g. "A", "A.", "M.", "B")
+  /// rather than a full middle name.
+  static bool isMiddleInitialOnly(String middleName) {
+    final trimmed = middleName.trim();
+    if (trimmed.isEmpty || trimmed == 'N/A') return false;
+
+    // Check letter count after stripping spaces and punctuation
+    final lettersOnly = trimmed.replaceAll(RegExp(r'[^a-zA-Z]'), '');
+    if (lettersOnly.length <= 1) return true;
+
+    // Check if every token is a single initial (e.g. "A. B." or "A.B.")
+    final words = trimmed.split(RegExp(r'\s+'));
+    if (words.isNotEmpty &&
+        words.every((w) => w.replaceAll(RegExp(r'[^a-zA-Z]'), '').length <= 1)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Whether this member only has a middle initial instead of a full middle name
+  bool get hasMiddleInitialOnly => isMiddleInitialOnly(middleName);
+
   /// Checks whether a member's profile is complete according to required fields
   static bool isProfileCompleteMap(Map<String, dynamic> member) {
+    final status = (member['membershipStatus'] ?? member['status'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    if (status == 'inactive') return true;
+
     const requiredFields = [
       'firstName',
       'lastName',
@@ -385,6 +435,9 @@ class Member {
       if (val == null || val.isEmpty || val == 'N/A') {
         return false;
       }
+      if (field == 'middleName' && isMiddleInitialOnly(val)) {
+        return false;
+      }
     }
 
     final signatureDeclined = member['signatureDeclined'] as bool? ?? false;
@@ -403,11 +456,16 @@ class Member {
 
   /// List of specific field names that are lacking in this member's profile
   List<String> get missingFields {
+    if (isInactive) return const [];
     final List<String> missing = [];
 
     if (firstName.trim().isEmpty || firstName.trim() == 'N/A') missing.add('First Name');
     if (lastName.trim().isEmpty || lastName.trim() == 'N/A') missing.add('Last Name');
-    if (middleName.trim().isEmpty || middleName.trim() == 'N/A') missing.add('Middle Name');
+    if (middleName.trim().isEmpty || middleName.trim() == 'N/A') {
+      missing.add('Middle Name');
+    } else if (hasMiddleInitialOnly) {
+      missing.add('Full Middle Name (Initial Only)');
+    }
     if (dob.trim().isEmpty || dob.trim() == 'N/A') missing.add('Date of Birth');
     if (gender.trim().isEmpty || gender.trim() == 'N/A') missing.add('Gender');
     if (civilStatus.trim().isEmpty || civilStatus.trim() == 'N/A') missing.add('Civil Status');
@@ -577,6 +635,7 @@ class Member {
           'Antipolo Center',
       positions: parsedPositions,
       membershipStatus: map['membershipStatus']?.toString() ?? 'Active',
+      inactiveReason: map['inactiveReason']?.toString() ?? '',
       memberType: map['memberType']?.toString() ?? 'Old',
       dateJoined: map['dateJoined']?.toString() ?? '',
       profileUrl: map['profileUrl']?.toString() ?? '',
@@ -612,6 +671,7 @@ class Member {
       'center': center,
       'positions': positions.map((p) => p.toMap()).toList(),
       'membershipStatus': membershipStatus,
+      'inactiveReason': inactiveReason,
       'memberType': memberType,
       'dateJoined': dateJoined,
       'profileUrl': profileUrl,
@@ -620,5 +680,34 @@ class Member {
       'createdAt': createdAt,
       'updatedAt': updatedAt,
     };
+  }
+
+  /// Returns a map of only the fields that differ from [original].
+  /// This prevents re-uploading unchanged heavy fields (like base64 profileUrl or signatureUrl).
+  Map<String, dynamic> diffFrom(Member original) {
+    final originalMap = original.toMap();
+    final currentMap = toMap();
+    final Map<String, dynamic> diff = {};
+
+    currentMap.forEach((key, value) {
+      if (key == 'updatedAt' || key == 'createdAt') return;
+
+      final origValue = originalMap[key];
+      if (key == 'positions') {
+        final currentPos = positions.map((p) => p.toMap()).toList();
+        final origPos = original.positions.map((p) => p.toMap()).toList();
+        if (jsonEncode(currentPos) != jsonEncode(origPos)) {
+          diff[key] = currentPos;
+        }
+      } else if (value != origValue) {
+        diff[key] = value;
+      }
+    });
+
+    if (diff.isNotEmpty) {
+      diff['updatedAt'] = DateTime.now().toIso8601String();
+    }
+
+    return diff;
   }
 }

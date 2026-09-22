@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../models/center_model.dart';
-import '../models/member.dart';
-import '../services/database_service.dart';
-import '../services/firestore_service.dart';
-import '../widgets/member_filter_bottom_sheet.dart';
+import '../../models/center_model.dart';
+import '../../models/member.dart';
+import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
+import '../../widgets/member_filter_bottom_sheet.dart';
 import 'member_details_screen.dart';
 
 class MembersDirectoryScreen extends StatefulWidget {
@@ -164,11 +164,11 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
               return false;
             }
 
-            // 6. Completeness filter (Complete / Incomplete)
-            if (_filterCriteria.completeness == 'Complete' && !m.isProfileComplete) {
+            // 6. Completeness filter (Complete / Incomplete - excludes Inactive members)
+            if (_filterCriteria.completeness == 'Complete' && (m.isInactive || !m.isProfileComplete)) {
               return false;
             }
-            if (_filterCriteria.completeness == 'Incomplete' && m.isProfileComplete) {
+            if (_filterCriteria.completeness == 'Incomplete' && (m.isInactive || m.isProfileComplete)) {
               return false;
             }
 

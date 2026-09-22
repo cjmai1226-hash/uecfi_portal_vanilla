@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../models/bylaw.dart';
-import '../services/database_service.dart';
+import '../../models/bylaw.dart';
+import '../../services/database_service.dart';
 
 class ConstitutionBylawsScreen extends StatefulWidget {
   const ConstitutionBylawsScreen({super.key});

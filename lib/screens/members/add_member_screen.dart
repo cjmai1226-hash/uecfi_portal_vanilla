@@ -5,20 +5,21 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:philippines_rpcmb/philippines_rpcmb.dart';
-import '../models/center_model.dart';
-import '../models/member.dart';
-import '../services/database_service.dart';
-import '../services/firestore_service.dart';
-import '../utils/date_formatter.dart';
-import '../widgets/image_crop_screen.dart';
-import '../widgets/signature_pad.dart';
+import '../../models/center_model.dart';
+import '../../models/member.dart';
+import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
+import '../../utils/date_formatter.dart';
+import '../../utils/image_utils.dart';
+import '../../widgets/image_crop_screen.dart';
+import '../../widgets/signature_pad.dart';
 
 class PositionFormItem {
   String level;
   final TextEditingController controller;
 
   PositionFormItem({this.level = 'Local', String initialPosition = 'Member'})
-      : controller = TextEditingController(text: initialPosition);
+    : controller = TextEditingController(text: initialPosition);
 
   void dispose() {
     controller.dispose();
@@ -71,7 +72,21 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
   String _gender = 'Male';
   String _civilStatus = 'Single';
   String _membershipStatus = 'Active';
+  bool get _isInactive => _membershipStatus.trim().toLowerCase() == 'inactive';
+  String _inactiveReason = 'Relocated / Moved Residence';
   String _memberType = 'Regular';
+
+  static const List<String> _inactiveReasons = [
+    'Relocated / Moved Residence',
+    'Transferred to Another Church',
+    'Work / Schedule Conflict',
+    'Health / Medical Reasons',
+    'Family Concerns',
+    'Deceased',
+    'Prolonged Absence / Uncontactable',
+    'Personal Decision',
+    'Other',
+  ];
 
   // Philippine Address
   Region? _selectedRegion;
@@ -101,7 +116,11 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
     return _allExistingMembers.where((other) {
       if (widget.memberToEdit != null) {
         if (other.memberId == widget.memberToEdit!.memberId) return false;
-        if (other.id.isNotEmpty && widget.memberToEdit!.id.isNotEmpty && other.id == widget.memberToEdit!.id) return false;
+        if (other.id.isNotEmpty &&
+            widget.memberToEdit!.id.isNotEmpty &&
+            other.id == widget.memberToEdit!.id) {
+          return false;
+        }
       }
       final of = Member.normalizeName(other.firstName);
       final om = Member.normalizeName(other.middleName);
@@ -168,35 +187,41 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
     _middleNameController.addListener(_onNameFieldChanged);
     _lastNameController.addListener(_onNameFieldChanged);
 
-    _firestoreService.getCurrentMember().then((user) {
-      if (mounted && user != null) {
-        setState(() {
-          _currentUser = user;
-          if (widget.memberToEdit == null) {
-            if (user.isDistrictLocked && user.district.isNotEmpty) {
-              _selectedDistrict = user.district;
-            }
-            if (user.isAreaLocked && user.area.isNotEmpty) {
-              _selectedArea = user.area;
-            }
-            if (user.isCenterLocked && user.center.isNotEmpty) {
-              _selectedCenter = user.center;
-            }
+    _firestoreService
+        .getCurrentMember()
+        .then((user) {
+          if (mounted && user != null) {
+            setState(() {
+              _currentUser = user;
+              if (widget.memberToEdit == null) {
+                if (user.isDistrictLocked && user.district.isNotEmpty) {
+                  _selectedDistrict = user.district;
+                }
+                if (user.isAreaLocked && user.area.isNotEmpty) {
+                  _selectedArea = user.area;
+                }
+                if (user.isCenterLocked && user.center.isNotEmpty) {
+                  _selectedCenter = user.center;
+                }
+              }
+            });
           }
-        });
-      }
-    }).catchError((_) {});
+        })
+        .catchError((_) {});
 
-    _firestoreService.getMembersOnce().then((list) {
-      if (mounted) {
-        setState(() {
-          _allExistingMembers = list;
-          if (widget.memberToEdit == null) {
-            _memberIdController.text = Member.generateNextMemberId(list);
+    _firestoreService
+        .getMembersOnce()
+        .then((list) {
+          if (mounted) {
+            setState(() {
+              _allExistingMembers = list;
+              if (widget.memberToEdit == null) {
+                _memberIdController.text = Member.generateNextMemberId(list);
+              }
+            });
           }
-        });
-      }
-    }).catchError((_) {});
+        })
+        .catchError((_) {});
 
     if (widget.memberToEdit != null) {
       final m = widget.memberToEdit!;
@@ -223,6 +248,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
       _gender = m.gender;
       _civilStatus = m.civilStatus;
       _membershipStatus = m.membershipStatus;
+      if (m.inactiveReason.isNotEmpty) {
+        _inactiveReason = m.inactiveReason;
+      }
       _memberType = m.memberType;
       if (m.district.isNotEmpty) _selectedDistrict = m.district;
       if (m.area.isNotEmpty) _selectedArea = m.area;
@@ -266,7 +294,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
       }
     } else {
       _initializePhilippineAddress();
-      _memberIdController.text = Member.generateNextMemberId(_allExistingMembers);
+      _memberIdController.text = Member.generateNextMemberId(
+        _allExistingMembers,
+      );
     }
   }
 
@@ -295,7 +325,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
       setState(() {
         _allCenters = centers;
         if (_selectedCenter.isEmpty && centers.isNotEmpty) {
-          if (_currentUser != null && _currentUser!.isCenterLocked && _currentUser!.center.isNotEmpty) {
+          if (_currentUser != null &&
+              _currentUser!.isCenterLocked &&
+              _currentUser!.center.isNotEmpty) {
             _selectedCenter = _currentUser!.center;
           } else {
             _selectedCenter = centers.first.centerName;
@@ -361,13 +393,16 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
     if (matchedRegion != null) {
       _selectedRegion = matchedRegion;
       for (final p in matchedRegion.provinces) {
-        if (p.name.toLowerCase() == pSearch || p.name.toLowerCase().contains(pSearch)) {
+        if (p.name.toLowerCase() == pSearch ||
+            p.name.toLowerCase().contains(pSearch)) {
           _selectedProvince = p;
           for (final mun in p.municipalities) {
-            if (mun.name.toLowerCase() == mSearch || mun.name.toLowerCase().contains(mSearch)) {
+            if (mun.name.toLowerCase() == mSearch ||
+                mun.name.toLowerCase().contains(mSearch)) {
               _selectedMunicipality = mun;
               for (final bar in mun.barangays) {
-                if (bar.toLowerCase() == bSearch || bar.toLowerCase().contains(bSearch)) {
+                if (bar.toLowerCase() == bSearch ||
+                    bar.toLowerCase().contains(bSearch)) {
                   _selectedBarangay = bar;
                   break;
                 }
@@ -394,18 +429,28 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
         final rawBytes = await picked.readAsBytes();
         if (!mounted) return;
 
+        // Downscale raw image if overly large to prevent memory/lag in cropper
+        final inputBytes = await ImageUtils.prepareForCropping(rawBytes);
+        if (!mounted) return;
+
         final croppedBytes = await ImageCropScreen.open(
           context,
-          imageBytes: rawBytes,
+          imageBytes: inputBytes,
           title: 'Crop Profile Photo (1x1)',
           aspectRatio: 1.0,
           lockAspectRatio: true,
         );
 
         if (croppedBytes != null) {
+          // Compress into optimized 512x512 JPEG (~30-60 KB)
+          final optimizedBytes =
+              await ImageUtils.compressProfilePhoto(croppedBytes);
+          if (!mounted) return;
+
           setState(() {
-            _profileImageBytes = croppedBytes;
-            _profileBase64 = 'data:image/jpeg;base64,${base64Encode(croppedBytes)}';
+            _profileImageBytes = optimizedBytes;
+            _profileBase64 =
+                ImageUtils.toDataUrl(optimizedBytes, mimeType: 'image/jpeg');
           });
         }
       }
@@ -474,8 +519,14 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                 ),
                 if (_hasProfilePhoto)
                   ListTile(
-                    leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-                    title: const Text('Remove Photo', style: TextStyle(color: Colors.redAccent)),
+                    leading: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: Colors.redAccent,
+                    ),
+                    title: const Text(
+                      'Remove Photo',
+                      style: TextStyle(color: Colors.redAccent),
+                    ),
                     onTap: () {
                       Navigator.pop(ctx);
                       setState(() {
@@ -490,6 +541,55 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
         );
       },
     );
+  }
+
+  Future<void> _pickSignatureImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 95,
+      );
+      if (picked != null) {
+        final rawBytes = await picked.readAsBytes();
+        if (!mounted) return;
+
+        final inputBytes = await ImageUtils.prepareForCropping(rawBytes);
+        if (!mounted) return;
+
+        final croppedBytes = await ImageCropScreen.open(
+          context,
+          imageBytes: inputBytes,
+          title: 'Crop Signature',
+          aspectRatio: 3.0,
+          lockAspectRatio: false,
+        );
+
+        if (croppedBytes != null && mounted) {
+          final optimizedBytes =
+              await ImageUtils.compressSignature(croppedBytes);
+          if (!mounted) return;
+
+          setState(() {
+            _signatureBytes = optimizedBytes;
+            _signatureBase64 =
+                ImageUtils.toDataUrl(optimizedBytes, mimeType: 'image/png');
+            _signatureDeclined = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to select signature image: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 
   void _showSignatureSourceModal() {
@@ -521,57 +621,63 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                   'Digital Signature',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Choose how you want to provide the member signature',
+                  style: TextStyle(fontSize: 12.5, color: Colors.grey),
+                ),
                 const SizedBox(height: 16),
                 ListTile(
                   leading: const Icon(Icons.draw_rounded),
                   title: const Text('Draw on Fullscreen Canvas'),
-                  subtitle: const Text('Landscape signing pad'),
+                  subtitle: const Text('Landscape signing pad using finger or stylus'),
                   onTap: () async {
                     Navigator.pop(ctx);
                     final bytes = await FullscreenSignatureScreen.open(
                       context,
                       initialSignatureBytes: _signatureBytes,
                     );
-                    if (bytes != null) {
+                    if (bytes != null && mounted) {
+                      final optimized =
+                          await ImageUtils.compressSignature(bytes);
+                      if (!mounted) return;
                       setState(() {
-                        _signatureBytes = bytes;
-                        _signatureBase64 = 'data:image/png;base64,${base64Encode(bytes)}';
+                        _signatureBytes = optimized;
+                        _signatureBase64 =
+                            ImageUtils.toDataUrl(optimized, mimeType: 'image/png');
                         _signatureDeclined = false;
                       });
                     }
                   },
                 ),
                 ListTile(
+                  leading: const Icon(Icons.photo_library_rounded),
+                  title: const Text('Upload Photo from Gallery'),
+                  subtitle: const Text('Select existing photo or image of signature'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickSignatureImage(ImageSource.gallery);
+                  },
+                ),
+                ListTile(
                   leading: const Icon(Icons.camera_alt_rounded),
                   title: const Text('Take Photo of Signature Paper'),
-                  onTap: () async {
+                  subtitle: const Text('Capture signature from paper with camera'),
+                  onTap: () {
                     Navigator.pop(ctx);
-                    final picker = ImagePicker();
-                    final picked = await picker.pickImage(source: ImageSource.camera);
-                    if (picked != null && mounted) {
-                      final raw = await picked.readAsBytes();
-                      if (!mounted) return;
-                      final cropped = await ImageCropScreen.open(
-                        context,
-                        imageBytes: raw,
-                        title: 'Crop Signature',
-                        aspectRatio: 3.0,
-                        lockAspectRatio: false,
-                      );
-                      if (cropped != null) {
-                        setState(() {
-                          _signatureBytes = cropped;
-                          _signatureBase64 = 'data:image/png;base64,${base64Encode(cropped)}';
-                          _signatureDeclined = false;
-                        });
-                      }
-                    }
+                    _pickSignatureImage(ImageSource.camera);
                   },
                 ),
                 if (_hasSignature)
                   ListTile(
-                    leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-                    title: const Text('Clear Signature', style: TextStyle(color: Colors.redAccent)),
+                    leading: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: Colors.redAccent,
+                    ),
+                    title: const Text(
+                      'Clear Signature',
+                      style: TextStyle(color: Colors.redAccent),
+                    ),
                     onTap: () {
                       Navigator.pop(ctx);
                       setState(() {
@@ -606,15 +712,28 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
   }
 
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please complete all required fields.'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.amber,
-        ),
-      );
-      return;
+    if (_isInactive) {
+      if (_inactiveReason.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a reason for being inactive.'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.amber,
+          ),
+        );
+        return;
+      }
+    } else {
+      if (!_formKey.currentState!.validate()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please complete all required fields.'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.amber,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() {
@@ -623,6 +742,23 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
 
     try {
       final nowStr = DateTime.now().toIso8601String();
+
+      // Guard against any oversized legacy Base64 string before saving
+      String safeProfileUrl = _profileBase64.trim();
+      if (safeProfileUrl.startsWith('data:image') &&
+          ImageUtils.estimateBase64SizeBytes(safeProfileUrl) >
+              ImageUtils.maxPhotoBytes) {
+        try {
+          final raw = safeProfileUrl.contains(',')
+              ? safeProfileUrl.split(',').last
+              : safeProfileUrl;
+          final decoded = base64Decode(raw);
+          final recompressed =
+              await ImageUtils.compressProfilePhoto(decoded);
+          safeProfileUrl =
+              ImageUtils.toDataUrl(recompressed, mimeType: 'image/jpeg');
+        } catch (_) {}
+      }
 
       if (widget.memberToEdit != null) {
         final updatedMember = widget.memberToEdit!.copyWith(
@@ -638,7 +774,8 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
           contactNo: _contactNoController.text.trim(),
           region: _selectedRegion?.regionName ?? widget.memberToEdit!.region,
           province: _selectedProvince?.name ?? widget.memberToEdit!.province,
-          municipality: _selectedMunicipality?.name ?? widget.memberToEdit!.municipality,
+          municipality:
+              _selectedMunicipality?.name ?? widget.memberToEdit!.municipality,
           barangay: _selectedBarangay ?? widget.memberToEdit!.barangay,
           street: _streetController.text.trim(),
           district: _selectedDistrict,
@@ -653,16 +790,25 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                 ),
               )
               .toList(),
+          status: _isInactive
+              ? 'inactive'
+              : (widget.memberToEdit?.status == 'inactive'
+                  ? 'registered'
+                  : (widget.memberToEdit?.status ?? 'registered')),
           membershipStatus: _membershipStatus,
+          inactiveReason: _isInactive ? _inactiveReason.trim() : '',
           memberType: _memberType,
           dateJoined: DateFormat('yyyy-MM-dd').format(_selectedDateJoined),
-          profileUrl: _profileBase64,
+          profileUrl: safeProfileUrl,
           signatureUrl: _signatureDeclined ? '' : _signatureBase64,
           signatureDeclined: _signatureDeclined,
           updatedAt: nowStr,
         );
 
-        await _firestoreService.updateMember(updatedMember);
+        await _firestoreService.updateMember(
+          updatedMember,
+          originalMember: widget.memberToEdit,
+        );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -671,7 +817,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                 children: [
                   const Icon(Icons.check_circle_rounded, color: Colors.white),
                   const SizedBox(width: 10),
-                  Text('Member ${updatedMember.fullName} updated successfully!'),
+                  Text('Member ${updatedMember.fullName} updated!'),
                 ],
               ),
               behavior: SnackBarBehavior.floating,
@@ -693,7 +839,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
         memberId: assignedMemberId,
         uid: '',
         role: 'member',
-        status: 'registered',
+        status: _isInactive ? 'inactive' : 'registered',
         firstName: _firstNameController.text.trim(),
         middleName: _middleNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
@@ -721,9 +867,10 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
             )
             .toList(),
         membershipStatus: _membershipStatus,
+        inactiveReason: _isInactive ? _inactiveReason.trim() : '',
         memberType: _memberType,
         dateJoined: DateFormat('yyyy-MM-dd').format(_selectedDateJoined),
-        profileUrl: _profileBase64,
+        profileUrl: safeProfileUrl,
         signatureUrl: _signatureDeclined ? '' : _signatureBase64,
         signatureDeclined: _signatureDeclined,
         createdAt: nowStr,
@@ -740,7 +887,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
               children: [
                 const Icon(Icons.check_circle_rounded, color: Colors.white),
                 const SizedBox(width: 10),
-                Text('Member ${newMember.fullName} registered successfully!'),
+                Text('Member ${newMember.fullName} registered!'),
               ],
             ),
             behavior: SnackBarBehavior.floating,
@@ -776,13 +923,19 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
     final isAreaLocked = _currentUser?.isAreaLocked ?? false;
     final isCenterLocked = _currentUser?.isCenterLocked ?? false;
 
-    final availableDistricts = _allCenters.map((c) => c.district).toSet().toList();
-    if (availableDistricts.isEmpty || !availableDistricts.contains(_selectedDistrict)) {
+    final availableDistricts = _allCenters
+        .map((c) => c.district)
+        .toSet()
+        .toList();
+    if (availableDistricts.isEmpty ||
+        !availableDistricts.contains(_selectedDistrict)) {
       availableDistricts.add(_selectedDistrict);
     }
 
     final availableAreas = _allCenters
-        .where((c) => c.district.toLowerCase() == _selectedDistrict.toLowerCase())
+        .where(
+          (c) => c.district.toLowerCase() == _selectedDistrict.toLowerCase(),
+        )
         .map((c) => c.area)
         .toSet()
         .toList();
@@ -801,7 +954,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.memberToEdit != null ? 'Edit Member Profile' : 'Register New Member',
+          widget.memberToEdit != null
+              ? 'Edit Member Profile'
+              : 'Register New Member',
         ),
         elevation: 0,
         scrolledUnderElevation: 1,
@@ -833,11 +988,17 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                                   setState(() {
                                     _selectedDistrict = val;
                                     final newAreas = _allCenters
-                                        .where((c) => c.district.toLowerCase() == val.toLowerCase())
+                                        .where(
+                                          (c) =>
+                                              c.district.toLowerCase() ==
+                                              val.toLowerCase(),
+                                        )
                                         .map((c) => c.area)
                                         .toSet()
                                         .toList();
-                                    if (newAreas.isNotEmpty) _selectedArea = newAreas.first;
+                                    if (newAreas.isNotEmpty) {
+                                      _selectedArea = newAreas.first;
+                                    }
                                   });
                                 }
                               },
@@ -863,11 +1024,14 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                       const SizedBox(height: 12),
                       _buildDropdownField(
                         label: 'Local Center',
-                        value: availableCenters.any((c) => c.centerName == _selectedCenter)
+                        value:
+                            availableCenters.any(
+                              (c) => c.centerName == _selectedCenter,
+                            )
                             ? _selectedCenter
                             : (availableCenters.isNotEmpty
-                                ? availableCenters.first.centerName
-                                : _selectedCenter),
+                                  ? availableCenters.first.centerName
+                                  : _selectedCenter),
                         items: availableCenters.isNotEmpty
                             ? availableCenters.map((c) => c.centerName).toList()
                             : [_selectedCenter],
@@ -910,14 +1074,21 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                                     height: 88,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: primaryColor, width: 2),
-                                      image: _currentProfileImageProvider != null
+                                      border: Border.all(
+                                        color: primaryColor,
+                                        width: 2,
+                                      ),
+                                      image:
+                                          _currentProfileImageProvider != null
                                           ? DecorationImage(
-                                              image: _currentProfileImageProvider!,
+                                              image:
+                                                  _currentProfileImageProvider!,
                                               fit: BoxFit.cover,
                                             )
                                           : null,
-                                      color: primaryColor.withValues(alpha: 0.12),
+                                      color: primaryColor.withValues(
+                                        alpha: 0.12,
+                                      ),
                                     ),
                                     child: _currentProfileImageProvider == null
                                         ? Icon(
@@ -954,7 +1125,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                             TextButton(
                               onPressed: _showImageSourceModal,
                               child: Text(
-                                _hasProfilePhoto ? 'Change Photo (1x1)' : 'Upload 1x1 Photo',
+                                _hasProfilePhoto
+                                    ? 'Change Photo (1x1)'
+                                    : 'Upload 1x1 Photo',
                                 style: TextStyle(
                                   color: primaryColor,
                                   fontWeight: FontWeight.bold,
@@ -972,33 +1145,53 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                         controller: _memberIdController,
                         hintText: 'e.g. UECFI-2026-0001',
                         enabled: false,
-                        validator: (val) =>
-                            (val == null || val.trim().isEmpty) ? 'Member ID is required' : null,
+                        validator: _isInactive
+                            ? null
+                            : (val) => (val == null || val.trim().isEmpty)
+                                ? 'Member ID is required'
+                                : null,
                       ),
                       const SizedBox(height: 12),
 
                       _buildTextField(
-                        label: 'First Name',
+                        label: _isInactive ? 'First Name (Optional)' : 'First Name *',
                         controller: _firstNameController,
                         hintText: 'Enter first name',
-                        validator: (val) =>
-                            (val == null || val.trim().isEmpty) ? 'First name is required' : null,
+                        validator: _isInactive
+                            ? null
+                            : (val) => (val == null || val.trim().isEmpty)
+                                ? 'First name is required'
+                                : null,
                       ),
                       const SizedBox(height: 12),
 
                       _buildTextField(
-                        label: 'Middle Name',
+                        label: _isInactive
+                            ? 'Middle Name (Optional)'
+                            : 'Middle Name (Full Name Required)',
                         controller: _middleNameController,
-                        hintText: 'Enter middle name (optional)',
+                        hintText: 'e.g. Santos (full name, not initial like A.)',
+                        validator: (val) {
+                          if (_isInactive) return null;
+                          if (val != null &&
+                              val.trim().isNotEmpty &&
+                              Member.isMiddleInitialOnly(val)) {
+                            return 'Enter full middle name, not just initial "${val.trim()}"';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 12),
 
                       _buildTextField(
-                        label: 'Last Name',
+                        label: _isInactive ? 'Last Name (Optional)' : 'Last Name *',
                         controller: _lastNameController,
                         hintText: 'Enter last name',
-                        validator: (val) =>
-                            (val == null || val.trim().isEmpty) ? 'Last name is required' : null,
+                        validator: _isInactive
+                            ? null
+                            : (val) => (val == null || val.trim().isEmpty)
+                                ? 'Last name is required'
+                                : null,
                       ),
                       const SizedBox(height: 12),
 
@@ -1007,7 +1200,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withValues(alpha: isDark ? 0.22 : 0.12),
+                            color: Colors.amber.withValues(
+                              alpha: isDark ? 0.22 : 0.12,
+                            ),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: Colors.amber.withValues(alpha: 0.5),
@@ -1042,7 +1237,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                                       '${_nameDuplicates.map((d) => '${d.center.isNotEmpty ? d.center : "Unknown"} (${d.district} • ID: ${d.memberId})').join('; ')}',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: isDark ? Colors.white70 : Colors.black87,
+                                        color: isDark
+                                            ? Colors.white70
+                                            : Colors.black87,
                                         height: 1.3,
                                       ),
                                     ),
@@ -1071,9 +1268,16 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                             child: _buildDropdownField(
                               label: 'Civil Status',
                               value: _civilStatus,
-                              items: const ['Single', 'Married', 'Widowed', 'Separated'],
+                              items: const [
+                                'Single',
+                                'Married',
+                                'Widowed',
+                                'Separated',
+                              ],
                               onChanged: (val) {
-                                if (val != null) setState(() => _civilStatus = val);
+                                if (val != null) {
+                                  setState(() => _civilStatus = val);
+                                }
                               },
                             ),
                           ),
@@ -1087,26 +1291,38 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                         borderRadius: BorderRadius.circular(10),
                         child: IgnorePointer(
                           child: _buildTextField(
-                            label: 'Date of Birth',
+                            label: _isInactive
+                                ? 'Date of Birth (Optional)'
+                                : 'Date of Birth *',
                             controller: _dobController,
                             hintText: 'YYYY-MM-DD',
-                            suffixIcon: const Icon(Icons.calendar_today_rounded, size: 18),
-                            validator: (val) => (val == null || val.trim().isEmpty)
-                                ? 'Date of birth is required'
-                                : null,
+                            suffixIcon: const Icon(
+                              Icons.calendar_today_rounded,
+                              size: 18,
+                            ),
+                            validator: _isInactive
+                                ? null
+                                : (val) =>
+                                    (val == null || val.trim().isEmpty)
+                                    ? 'Date of birth is required'
+                                    : null,
                           ),
                         ),
                       ),
                       const SizedBox(height: 12),
 
                       _buildTextField(
-                        label: 'Contact Number',
+                        label: _isInactive
+                            ? 'Contact Number (Optional)'
+                            : 'Contact Number *',
                         controller: _contactNoController,
                         hintText: 'e.g. 09123456789',
                         keyboardType: TextInputType.phone,
-                        validator: (val) => (val == null || val.trim().isEmpty)
-                            ? 'Contact number is required'
-                            : null,
+                        validator: _isInactive
+                            ? null
+                            : (val) => (val == null || val.trim().isEmpty)
+                                ? 'Contact number is required'
+                                : null,
                       ),
                       const SizedBox(height: 12),
 
@@ -1134,14 +1350,21 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                     children: [
                       // Computed Category Notice
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.auto_awesome_rounded, size: 16, color: primaryColor),
+                            Icon(
+                              Icons.auto_awesome_rounded,
+                              size: 16,
+                              color: primaryColor,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               'Auto-Computed Category: $_dynamicCategory',
@@ -1164,7 +1387,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                               value: _membershipStatus,
                               items: const ['Active', 'Inactive', 'Pending'],
                               onChanged: (val) {
-                                if (val != null) setState(() => _membershipStatus = val);
+                                if (val != null) {
+                                  setState(() => _membershipStatus = val);
+                                }
                               },
                             ),
                           ),
@@ -1175,12 +1400,69 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                               value: _memberType,
                               items: const ['Regular', 'Old', 'New'],
                               onChanged: (val) {
-                                if (val != null) setState(() => _memberType = val);
+                                if (val != null) {
+                                  setState(() => _memberType = val);
+                                }
                               },
                             ),
                           ),
                         ],
                       ),
+                      if (_isInactive) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(
+                              alpha: isDark ? 0.2 : 0.08,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: Colors.blue.withValues(
+                                alpha: isDark ? 0.4 : 0.25,
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline_rounded,
+                                size: 18,
+                                color: Colors.blue,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Inactive Member: All profile information fields are optional. Only the reason for being inactive is required.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: isDark
+                                        ? Colors.white70
+                                        : Colors.black87,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDropdownField(
+                          label: 'Reason for Being Inactive *',
+                          value: _inactiveReasons.contains(_inactiveReason)
+                              ? _inactiveReason
+                              : _inactiveReasons.first,
+                          items: _inactiveReasons,
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _inactiveReason = val);
+                            }
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 16),
 
                       // Ministry Positions
@@ -1189,18 +1471,27 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                         children: [
                           const Text(
                             'Ministry Positions',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           TextButton.icon(
                             onPressed: () {
                               setState(() {
                                 _positionItems.add(
-                                  PositionFormItem(level: 'Local', initialPosition: ''),
+                                  PositionFormItem(
+                                    level: 'Local',
+                                    initialPosition: '',
+                                  ),
                                 );
                               });
                             },
                             icon: const Icon(Icons.add_rounded, size: 16),
-                            label: const Text('Add Position', style: TextStyle(fontSize: 12)),
+                            label: const Text(
+                              'Add Position',
+                              style: TextStyle(fontSize: 12),
+                            ),
                           ),
                         ],
                       ),
@@ -1218,9 +1509,17 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                                 child: _buildDropdownField(
                                   label: 'Level',
                                   value: item.level,
-                                  items: const ['Local', 'Area', 'District', 'National', 'Auxiliary'],
+                                  items: const [
+                                    'Local',
+                                    'Area',
+                                    'District',
+                                    'National',
+                                    'Auxiliary',
+                                  ],
                                   onChanged: (val) {
-                                    if (val != null) setState(() => item.level = val);
+                                    if (val != null) {
+                                      setState(() => item.level = val);
+                                    }
                                   },
                                 ),
                               ),
@@ -1228,11 +1527,15 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                               Expanded(
                                 flex: 6,
                                 child: _buildTextField(
-                                  label: 'Position Title *',
+                                  label: _isInactive
+                                      ? 'Position Title'
+                                      : 'Position Title *',
                                   controller: item.controller,
                                   hintText: 'e.g. Pastor, Deacon',
                                   validator: (val) =>
-                                      index == 0 && (val == null || val.trim().isEmpty)
+                                      !_isInactive &&
+                                      index == 0 &&
+                                      (val == null || val.trim().isEmpty)
                                           ? 'Required'
                                           : null,
                                 ),
@@ -1285,15 +1588,23 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                           if (r != null) {
                             setState(() {
                               _selectedRegion = r;
-                              _selectedProvince = r.provinces.isNotEmpty ? r.provinces.first : null;
+                              _selectedProvince = r.provinces.isNotEmpty
+                                  ? r.provinces.first
+                                  : null;
                               _selectedMunicipality =
-                                  (_selectedProvince != null && _selectedProvince!.municipalities.isNotEmpty)
-                                      ? _selectedProvince!.municipalities.first
-                                      : null;
+                                  (_selectedProvince != null &&
+                                      _selectedProvince!
+                                          .municipalities
+                                          .isNotEmpty)
+                                  ? _selectedProvince!.municipalities.first
+                                  : null;
                               _selectedBarangay =
-                                  (_selectedMunicipality != null && _selectedMunicipality!.barangays.isNotEmpty)
-                                      ? _selectedMunicipality!.barangays.first
-                                      : null;
+                                  (_selectedMunicipality != null &&
+                                      _selectedMunicipality!
+                                          .barangays
+                                          .isNotEmpty)
+                                  ? _selectedMunicipality!.barangays.first
+                                  : null;
                             });
                           }
                         },
@@ -1301,7 +1612,8 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                       const SizedBox(height: 12),
 
                       // Province
-                      if (_selectedRegion != null && _selectedRegion!.provinces.isNotEmpty) ...[
+                      if (_selectedRegion != null &&
+                          _selectedRegion!.provinces.isNotEmpty) ...[
                         _buildDropdownFieldGeneric<Province>(
                           label: 'Province',
                           value: _selectedProvince,
@@ -1311,11 +1623,17 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                             if (p != null) {
                               setState(() {
                                 _selectedProvince = p;
-                                _selectedMunicipality = p.municipalities.isNotEmpty ? p.municipalities.first : null;
+                                _selectedMunicipality =
+                                    p.municipalities.isNotEmpty
+                                    ? p.municipalities.first
+                                    : null;
                                 _selectedBarangay =
-                                    (_selectedMunicipality != null && _selectedMunicipality!.barangays.isNotEmpty)
-                                        ? _selectedMunicipality!.barangays.first
-                                        : null;
+                                    (_selectedMunicipality != null &&
+                                        _selectedMunicipality!
+                                            .barangays
+                                            .isNotEmpty)
+                                    ? _selectedMunicipality!.barangays.first
+                                    : null;
                               });
                             }
                           },
@@ -1324,7 +1642,8 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                       ],
 
                       // Municipality / City
-                      if (_selectedProvince != null && _selectedProvince!.municipalities.isNotEmpty) ...[
+                      if (_selectedProvince != null &&
+                          _selectedProvince!.municipalities.isNotEmpty) ...[
                         _buildDropdownFieldGeneric<Municipality>(
                           label: 'Municipality / City',
                           value: _selectedMunicipality,
@@ -1334,7 +1653,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                             if (m != null) {
                               setState(() {
                                 _selectedMunicipality = m;
-                                _selectedBarangay = m.barangays.isNotEmpty ? m.barangays.first : null;
+                                _selectedBarangay = m.barangays.isNotEmpty
+                                    ? m.barangays.first
+                                    : null;
                               });
                             }
                           },
@@ -1343,13 +1664,18 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                       ],
 
                       // Barangay
-                      if (_selectedMunicipality != null && _selectedMunicipality!.barangays.isNotEmpty) ...[
+                      if (_selectedMunicipality != null &&
+                          _selectedMunicipality!.barangays.isNotEmpty) ...[
                         _buildDropdownField(
                           label: 'Barangay',
-                          value: _selectedBarangay ?? _selectedMunicipality!.barangays.first,
+                          value:
+                              _selectedBarangay ??
+                              _selectedMunicipality!.barangays.first,
                           items: _selectedMunicipality!.barangays,
                           onChanged: (val) {
-                            if (val != null) setState(() => _selectedBarangay = val);
+                            if (val != null) {
+                              setState(() => _selectedBarangay = val);
+                            }
                           },
                         ),
                         const SizedBox(height: 12),
@@ -1368,7 +1694,10 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
               const SizedBox(height: 18),
 
               // Card 5: DIGITAL SIGNATURE & ATTESTATION
-              _buildSectionHeader('DIGITAL SIGNATURE & ATTESTATION', primaryColor),
+              _buildSectionHeader(
+                'DIGITAL SIGNATURE & ATTESTATION',
+                primaryColor,
+              ),
               const SizedBox(height: 10),
               Card(
                 child: Padding(
@@ -1399,7 +1728,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                             height: 100,
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
+                              color: isDark
+                                  ? Colors.white10
+                                  : Colors.black.withValues(alpha: 0.04),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: primaryColor.withValues(alpha: 0.3),
@@ -1407,9 +1738,11 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                             ),
                             child: _hasSignature
                                 ? Center(
-                                    child: _currentSignatureImageProvider != null
+                                    child:
+                                        _currentSignatureImageProvider != null
                                         ? Image(
-                                            image: _currentSignatureImageProvider!,
+                                            image:
+                                                _currentSignatureImageProvider!,
                                             fit: BoxFit.contain,
                                             height: 80,
                                           )
@@ -1418,11 +1751,18 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                                 : Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.draw_rounded, size: 28, color: primaryColor),
+                                      Icon(
+                                        Icons.draw_rounded,
+                                        size: 28,
+                                        color: primaryColor,
+                                      ),
                                       const SizedBox(height: 6),
                                       Text(
                                         'Tap to draw or upload signature',
-                                        style: TextStyle(fontSize: 12.5, color: primaryColor),
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          color: primaryColor,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -1435,7 +1775,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                             TextButton.icon(
                               onPressed: _showSignatureSourceModal,
                               icon: const Icon(Icons.edit_rounded, size: 15),
-                              label: Text(_hasSignature ? 'Change Signature' : 'Sign Now'),
+                              label: Text(
+                                _hasSignature ? 'Change Signature' : 'Sign Now',
+                              ),
                             ),
                           ],
                         ),
@@ -1457,20 +1799,32 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : Icon(
-                          widget.memberToEdit != null ? Icons.save_rounded : Icons.person_add_alt_1_rounded,
+                          widget.memberToEdit != null
+                              ? Icons.save_rounded
+                              : Icons.person_add_alt_1_rounded,
                           size: 20,
                         ),
                   label: Text(
-                    widget.memberToEdit != null ? 'SAVE PROFILE CHANGES' : 'CREATE MEMBER RECORD',
-                    style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                    widget.memberToEdit != null
+                        ? 'SAVE PROFILE CHANGES'
+                        : 'CREATE MEMBER RECORD',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -1538,17 +1892,24 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
             ),
             suffixIcon: enabled
                 ? suffixIcon
-                : const Icon(Icons.lock_outline_rounded, size: 16, color: Colors.grey),
+                : const Icon(
+                    Icons.lock_outline_rounded,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
             fillColor: !enabled
                 ? (isDark
-                    ? Colors.white.withValues(alpha: 0.04)
-                    : Colors.black.withValues(alpha: 0.03))
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : Colors.black.withValues(alpha: 0.03))
                 : null,
             disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide.none,
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
           ),
         ),
       ],
@@ -1564,7 +1925,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textMuted = isDark ? Colors.white54 : Colors.black54;
-    final selectedVal = items.contains(value) ? value : (items.isNotEmpty ? items.first : null);
+    final selectedVal = items.contains(value)
+        ? value
+        : (items.isNotEmpty ? items.first : null);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1584,29 +1947,38 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
           initialValue: selectedVal,
           isExpanded: true,
           icon: Icon(
-            enabled ? Icons.keyboard_arrow_down_rounded : Icons.lock_outline_rounded,
+            enabled
+                ? Icons.keyboard_arrow_down_rounded
+                : Icons.lock_outline_rounded,
             size: enabled ? 20 : 16,
             color: enabled ? null : (isDark ? Colors.white38 : Colors.black38),
           ),
           items: items
-              .map((item) => DropdownMenuItem(
-                    value: item,
-                    child: Text(
-                      item,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        color: enabled ? null : (isDark ? Colors.white38 : Colors.black38),
-                      ),
+              .map(
+                (item) => DropdownMenuItem(
+                  value: item,
+                  child: Text(
+                    item,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      color: enabled
+                          ? null
+                          : (isDark ? Colors.white38 : Colors.black38),
                     ),
-                  ))
+                  ),
+                ),
+              )
               .toList(),
           onChanged: enabled ? onChanged : null,
           decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
             fillColor: !enabled
                 ? (isDark
-                    ? Colors.white.withValues(alpha: 0.04)
-                    : Colors.black.withValues(alpha: 0.03))
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : Colors.black.withValues(alpha: 0.03))
                 : null,
             disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
@@ -1627,7 +1999,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textMuted = isDark ? Colors.white54 : Colors.black54;
-    final selectedVal = items.contains(value) ? value : (items.isNotEmpty ? items.first : null);
+    final selectedVal = items.contains(value)
+        ? value
+        : (items.isNotEmpty ? items.first : null);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1648,14 +2022,16 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
           isExpanded: true,
           icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
           items: items
-              .map((item) => DropdownMenuItem<T>(
-                    value: item,
-                    child: Text(
-                      itemLabel(item),
-                      style: const TextStyle(fontSize: 13.5),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ))
+              .map(
+                (item) => DropdownMenuItem<T>(
+                  value: item,
+                  child: Text(
+                    itemLabel(item),
+                    style: const TextStyle(fontSize: 13.5),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
               .toList(),
           onChanged: onChanged,
           decoration: const InputDecoration(

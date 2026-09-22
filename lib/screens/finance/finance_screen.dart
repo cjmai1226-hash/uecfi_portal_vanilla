@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/center_model.dart';
-import '../models/member.dart';
-import '../services/database_service.dart';
-import '../services/firestore_service.dart';
-import 'center_details_screen.dart';
+import '../../models/center_model.dart';
+import '../../models/member.dart';
+import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
+import '../centers/center_details_screen.dart';
 
 class FinanceScreen extends StatefulWidget {
   const FinanceScreen({super.key});
@@ -97,86 +97,13 @@ class _FinanceScreenState extends State<FinanceScreen> {
     });
   }
 
-  /// Center-Member matching with disambiguation for duplicated center names
+  /// Center-Member matching with strict area and district isolation
   List<Member> _getCenterMembers(
     CenterModel center,
     List<Member> baseMembers,
     List<CenterModel> allCenters,
   ) {
-    return baseMembers.where((m) {
-      final mCenter = m.center.trim().toLowerCase();
-      final cName = center.centerName.trim().toLowerCase();
-      final cDisplay = center.displayNameWithAddress.trim().toLowerCase();
-      final cAddr = center.centerAddress.trim().toLowerCase();
-
-      if (mCenter.isEmpty) return false;
-
-      // 1. Exact match with display name including address
-      if (mCenter == cDisplay) return true;
-
-      // 2. Exact match with center name
-      if (mCenter == cName) {
-        final hasSameNameSiblings = allCenters
-            .where(
-              (other) =>
-                  other.centerName.trim().toLowerCase() == cName &&
-                  (other.centerAddress.trim().toLowerCase() != cAddr ||
-                      other.area.trim().toLowerCase() !=
-                          center.area.trim().toLowerCase()),
-            )
-            .isNotEmpty;
-
-        if (hasSameNameSiblings) {
-          if (m.area.trim().isNotEmpty && center.area.trim().isNotEmpty) {
-            if (m.area.trim().toLowerCase() ==
-                center.area.trim().toLowerCase()) {
-              return true;
-            }
-          }
-          if (cAddr.isNotEmpty &&
-              (m.municipality.trim().isNotEmpty ||
-                  m.province.trim().isNotEmpty ||
-                  m.barangay.trim().isNotEmpty)) {
-            final mLoc = '${m.barangay} ${m.municipality} ${m.province}'
-                .toLowerCase();
-            if (cAddr.split(',').any((part) {
-              final p = part.trim();
-              return p.isNotEmpty && mLoc.contains(p);
-            })) {
-              return true;
-            }
-          }
-          if (m.district.trim().isNotEmpty &&
-              center.district.trim().isNotEmpty &&
-              m.district.trim().toLowerCase() ==
-                  center.district.trim().toLowerCase()) {
-            final sameDistrictSiblings = allCenters
-                .where(
-                  (other) =>
-                      other.centerName.trim().toLowerCase() == cName &&
-                      other.district.trim().toLowerCase() ==
-                          center.district.trim().toLowerCase() &&
-                      (other.centerAddress.trim().toLowerCase() != cAddr ||
-                          other.area.trim().toLowerCase() !=
-                              center.area.trim().toLowerCase()),
-                )
-                .isNotEmpty;
-            if (!sameDistrictSiblings) return true;
-          }
-          return false;
-        }
-        return true;
-      }
-
-      // 3. Contains both name and address
-      if (cAddr.isNotEmpty &&
-          mCenter.contains(cName) &&
-          mCenter.contains(cAddr)) {
-        return true;
-      }
-
-      return false;
-    }).toList();
+    return baseMembers.where((m) => center.matchesMember(m, allCenters)).toList();
   }
 
   void _showRateScheduleModal(BuildContext context) {

@@ -3,6 +3,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import '../utils/image_utils.dart';
+import 'image_crop_screen.dart';
 
 class SignaturePadController {
   _SignaturePadState? _state;
@@ -325,6 +328,46 @@ class _FullscreenSignatureScreenState extends State<FullscreenSignatureScreen> {
             icon: const Icon(Icons.screen_rotation_rounded, size: 20),
             tooltip: _isLandscape ? 'Switch to Portrait' : 'Switch to Landscape',
             onPressed: _toggleOrientation,
+          ),
+          IconButton(
+            icon: const Icon(Icons.photo_library_rounded, size: 20),
+            tooltip: 'Upload Photo of Signature',
+            onPressed: () async {
+              final nav = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                final picker = ImagePicker();
+                final picked = await picker.pickImage(
+                  source: ImageSource.gallery,
+                  maxWidth: 1600,
+                  maxHeight: 1600,
+                  imageQuality: 95,
+                );
+                if (!mounted || picked == null) return;
+                final raw = await picked.readAsBytes();
+                if (!mounted) return;
+                final input = await ImageUtils.prepareForCropping(raw);
+                if (!mounted) return;
+                final cropped = await ImageCropScreen.open(
+                  this.context,
+                  imageBytes: input,
+                  title: 'Crop Signature',
+                  aspectRatio: 3.0,
+                  lockAspectRatio: false,
+                );
+                if (!mounted || cropped == null) return;
+                final optimized = await ImageUtils.compressSignature(cropped);
+                nav.pop(optimized);
+              } catch (e) {
+                if (!mounted) return;
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to pick photo: $e'),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                );
+              }
+            },
           ),
           TextButton.icon(
             onPressed: () {

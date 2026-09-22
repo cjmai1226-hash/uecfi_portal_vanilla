@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/center_model.dart';
-import '../models/member.dart';
-import '../services/database_service.dart';
-import '../services/firestore_service.dart';
-import '../widgets/stats_filter_bottom_sheet.dart';
-import 'center_details_screen.dart';
+import '../../models/center_model.dart';
+import '../../models/member.dart';
+import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
+import '../../widgets/animated_progress_circle.dart';
+import '../../widgets/stats_filter_bottom_sheet.dart';
+import '../centers/center_details_screen.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -106,84 +107,9 @@ class _StatsScreenState extends State<StatsScreen> {
     List<Member> allMembers,
     List<CenterModel> allCenters,
   ) {
-    final cMembers = allMembers.where((m) {
-      final mCenter = m.center.trim().toLowerCase();
-      final cName = center.centerName.trim().toLowerCase();
-      final cDisplay = center.displayNameWithAddress.trim().toLowerCase();
-      final cAddr = center.centerAddress.trim().toLowerCase();
-
-      if (mCenter.isEmpty) return false;
-
-      // 1. Exact match with display name including address
-      if (mCenter == cDisplay) return true;
-
-      // 2. Exact match with center name
-      if (mCenter == cName) {
-        // Check if other centers share this exact same name
-        final hasSameNameSiblings = allCenters
-            .where(
-              (other) =>
-                  other.centerName.trim().toLowerCase() == cName &&
-                  (other.centerAddress.trim().toLowerCase() != cAddr ||
-                      other.area.trim().toLowerCase() !=
-                          center.area.trim().toLowerCase()),
-            )
-            .isNotEmpty;
-
-        if (hasSameNameSiblings) {
-          // Disambiguate by area if available
-          if (m.area.trim().isNotEmpty && center.area.trim().isNotEmpty) {
-            if (m.area.trim().toLowerCase() ==
-                center.area.trim().toLowerCase()) {
-              return true;
-            }
-          }
-          // Disambiguate by location in center address
-          if (cAddr.isNotEmpty &&
-              (m.municipality.trim().isNotEmpty ||
-                  m.province.trim().isNotEmpty ||
-                  m.barangay.trim().isNotEmpty)) {
-            final mLoc = '${m.barangay} ${m.municipality} ${m.province}'
-                .toLowerCase();
-            if (cAddr.split(',').any((part) {
-              final p = part.trim();
-              return p.isNotEmpty && mLoc.contains(p);
-            })) {
-              return true;
-            }
-          }
-          // Disambiguate by district
-          if (m.district.trim().isNotEmpty &&
-              center.district.trim().isNotEmpty &&
-              m.district.trim().toLowerCase() ==
-                  center.district.trim().toLowerCase()) {
-            final sameDistrictSiblings = allCenters
-                .where(
-                  (other) =>
-                      other.centerName.trim().toLowerCase() == cName &&
-                      other.district.trim().toLowerCase() ==
-                          center.district.trim().toLowerCase() &&
-                      (other.centerAddress.trim().toLowerCase() != cAddr ||
-                          other.area.trim().toLowerCase() !=
-                              center.area.trim().toLowerCase()),
-                )
-                .isNotEmpty;
-            if (!sameDistrictSiblings) return true;
-          }
-          return false;
-        }
-        return true;
-      }
-
-      // 3. String contains both name and address
-      if (cAddr.isNotEmpty &&
-          mCenter.contains(cName) &&
-          mCenter.contains(cAddr)) {
-        return true;
-      }
-
-      return false;
-    }).toList();
+    final cMembers = allMembers
+        .where((m) => center.matchesMember(m, allCenters))
+        .toList();
 
     final cActiveMembers = cMembers.where((m) => !m.isInactive).toList();
     final cActiveCount = cActiveMembers.length;
@@ -269,6 +195,19 @@ class _StatsScreenState extends State<StatsScreen> {
           final allCenters = List<CenterModel>.from(_databaseCenters);
 
           // 2. Scope predefined centers by active jurisdiction filter
+          final selectedCenterModel = _filterCriteria.center != 'All Local Centers'
+              ? allCenters.where((c) {
+                  final matchDistrict = _filterCriteria.district == 'All Districts' ||
+                      c.district.toLowerCase() == _filterCriteria.district.toLowerCase();
+                  final matchArea = _filterCriteria.area == 'All Areas' ||
+                      c.area.toLowerCase() == _filterCriteria.area.toLowerCase();
+                  return matchDistrict &&
+                      matchArea &&
+                      (c.displayNameWithAddress.toLowerCase() == _filterCriteria.center.toLowerCase() ||
+                       c.centerName.toLowerCase() == _filterCriteria.center.toLowerCase());
+                }).firstOrNull
+              : null;
+
           final scopedCenters = allCenters.where((c) {
             final matchDistrict =
                 _filterCriteria.district == 'All Districts' ||
@@ -279,10 +218,13 @@ class _StatsScreenState extends State<StatsScreen> {
                 c.area.toLowerCase() == _filterCriteria.area.toLowerCase();
             final matchCenter =
                 _filterCriteria.center == 'All Local Centers' ||
-                c.centerName.toLowerCase() ==
-                    _filterCriteria.center.toLowerCase() ||
-                c.displayNameWithAddress.toLowerCase() ==
-                    _filterCriteria.center.toLowerCase();
+                (selectedCenterModel != null
+                    ? (c.id == selectedCenterModel.id ||
+                        (c.centerName.toLowerCase() == selectedCenterModel.centerName.toLowerCase() &&
+                         c.area.toLowerCase() == selectedCenterModel.area.toLowerCase() &&
+                         c.centerAddress.toLowerCase() == selectedCenterModel.centerAddress.toLowerCase()))
+                    : (c.displayNameWithAddress.toLowerCase() == _filterCriteria.center.toLowerCase() ||
+                       c.centerName.toLowerCase() == _filterCriteria.center.toLowerCase()));
             return matchDistrict && matchArea && matchCenter;
           }).toList();
 
@@ -297,11 +239,10 @@ class _StatsScreenState extends State<StatsScreen> {
                 m.area.toLowerCase() == _filterCriteria.area.toLowerCase();
             final matchCenter =
                 _filterCriteria.center == 'All Local Centers' ||
-                m.center.toLowerCase() ==
-                    _filterCriteria.center.toLowerCase() ||
-                _filterCriteria.center.toLowerCase().contains(
-                  m.center.toLowerCase(),
-                );
+                (selectedCenterModel != null
+                    ? selectedCenterModel.matchesMember(m, allCenters)
+                    : (m.center.toLowerCase() == _filterCriteria.center.toLowerCase() ||
+                       _filterCriteria.center.toLowerCase().contains(m.center.toLowerCase())));
 
             return matchDistrict && matchArea && matchCenter;
           }).toList();
@@ -463,43 +404,17 @@ class _StatsScreenState extends State<StatsScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 16),
-                                // Circular Progress Indicator with Percentage
-                                Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 56,
-                                      height: 56,
-                                      child: CircularProgressIndicator(
-                                        value: completenessRate,
-                                        strokeWidth: 5,
-                                        strokeCap: StrokeCap.round,
-                                        backgroundColor: isDark
-                                            ? Colors.white.withValues(
-                                                alpha: 0.08,
-                                              )
-                                            : Colors.black.withValues(
-                                                alpha: 0.06,
-                                              ),
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                          completenessRate >= 0.8
-                                              ? const Color(0xFF00C853)
-                                              : (completenessRate >= 0.5
-                                                  ? Colors.amber.shade800
-                                                  : Colors.orange),
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      '${(completenessRate * 100).toStringAsFixed(0)}%',
-                                      style: TextStyle(
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: textPrimary,
-                                      ),
-                                    ),
-                                  ],
+                                // Animated Circular Progress Indicator with Percentage
+                                AnimatedProgressCircle(
+                                  value: completenessRate,
+                                  size: 56,
+                                  strokeWidth: 5,
+                                  isDark: isDark,
+                                  textStyle: TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: textPrimary,
+                                  ),
                                 ),
                               ],
                             ),
@@ -876,42 +791,17 @@ class _StatsScreenState extends State<StatsScreen> {
                                   ),
                                   const SizedBox(width: 14),
 
-                                  // Trailing: Circular Progress Indicator with Completeness Percentage inside
-                                  Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      SizedBox(
-                                        width: 44,
-                                        height: 44,
-                                        child: CircularProgressIndicator(
-                                          value: centerRatio,
-                                          strokeWidth: 4,
-                                          backgroundColor: isDark
-                                              ? Colors.white.withValues(
-                                                  alpha: 0.08,
-                                                )
-                                              : Colors.black.withValues(
-                                                  alpha: 0.06,
-                                                ),
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                            centerRatio >= 0.8
-                                                ? const Color(0xFF00C853)
-                                                : (centerRatio >= 0.5
-                                                      ? Colors.amber.shade800
-                                                      : Colors.orange),
-                                          ),
-                                        ),
-                                      ),
-                                      Text(
-                                        '${(centerRatio * 100).toStringAsFixed(0)}%',
-                                        style: TextStyle(
-                                          fontSize: 11.5,
-                                          fontWeight: FontWeight.w800,
-                                          color: textPrimary,
-                                        ),
-                                      ),
-                                    ],
+                                  // Trailing: Animated Circular Progress Indicator with Completeness Percentage
+                                  AnimatedProgressCircle(
+                                    value: centerRatio,
+                                    size: 44,
+                                    strokeWidth: 4,
+                                    isDark: isDark,
+                                    textStyle: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: textPrimary,
+                                    ),
                                   ),
                                 ],
                               ),

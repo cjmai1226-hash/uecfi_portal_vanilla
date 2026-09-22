@@ -1,10 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../models/center_model.dart';
-import '../models/member.dart';
-import '../models/transfer_request.dart';
-import '../services/database_service.dart';
-import '../services/firestore_service.dart';
+import '../../models/center_model.dart';
+import '../../models/member.dart';
+import '../../models/transfer_request.dart';
+import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
 
 class TransferRequestScreen extends StatefulWidget {
   final Member member;
@@ -26,6 +26,7 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
 
   List<CenterModel> _allCenters = [];
   CenterModel? _selectedTargetCenter;
+  CenterModel? _currentCenterModel;
   bool _isLoadingCenters = true;
   bool _isSubmitting = false;
   String? _selectedPresetReason;
@@ -54,13 +55,38 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
   Future<void> _loadAvailableCenters() async {
     try {
       final centers = await _databaseService.getCenters();
-      // Filter out the member's current center (case-insensitive)
+
       final currentCenterName = widget.member.center.trim().toLowerCase();
+      final currentArea = widget.member.area.trim().toLowerCase();
+      final currentDistrict = widget.member.district.trim().toLowerCase();
+
+      // Find current center model to extract its address
+      final currentMatches = centers.where((c) {
+        final sameName = c.centerName.trim().toLowerCase() == currentCenterName;
+        final sameArea = currentArea.isEmpty || c.area.trim().toLowerCase() == currentArea;
+        return sameName && sameArea;
+      }).toList();
+      if (currentMatches.isNotEmpty) {
+        _currentCenterModel = currentMatches.first;
+      }
+
+      // Filter out ONLY the member's exact current center (same name AND same area AND same district)
+      // This preserves other centers that have the same name but different address/area!
       final filtered = centers.where((c) {
-        return c.centerName.trim().toLowerCase() != currentCenterName;
+        final sameName = c.centerName.trim().toLowerCase() == currentCenterName;
+        final sameArea = currentArea.isEmpty || c.area.trim().toLowerCase() == currentArea;
+        final sameDistrict = currentDistrict.isEmpty || c.district.trim().toLowerCase() == currentDistrict;
+        if (sameName && sameArea && sameDistrict) {
+          return false;
+        }
+        return true;
       }).toList();
 
-      filtered.sort((a, b) => a.centerName.toLowerCase().compareTo(b.centerName.toLowerCase()));
+      filtered.sort((a, b) {
+        final nameCmp = a.centerName.toLowerCase().compareTo(b.centerName.toLowerCase());
+        if (nameCmp != 0) return nameCmp;
+        return a.centerAddress.toLowerCase().compareTo(b.centerAddress.toLowerCase());
+      });
 
       if (mounted) {
         setState(() {
@@ -136,9 +162,11 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
         memberId: widget.member.memberId,
         memberName: widget.member.fullName,
         fromCenter: widget.member.center.isNotEmpty ? widget.member.center : 'Unassigned',
+        fromCenterAddress: _currentCenterModel?.centerAddress ?? '',
         fromArea: widget.member.area.isNotEmpty ? widget.member.area : 'Area 1',
         fromDistrict: widget.member.district.isNotEmpty ? widget.member.district : 'District 3',
         toCenter: _selectedTargetCenter!.centerName,
+        toCenterAddress: _selectedTargetCenter!.centerAddress,
         toArea: _selectedTargetCenter!.area.isNotEmpty ? _selectedTargetCenter!.area : 'Area 1',
         toDistrict: _selectedTargetCenter!.district.isNotEmpty
             ? _selectedTargetCenter!.district
@@ -342,6 +370,23 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
                                       color: textPrimary,
                                     ),
                                   ),
+                                  if (_currentCenterModel != null && _currentCenterModel!.centerAddress.trim().isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.location_on_outlined, size: 12, color: textSecondary),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            _currentCenterModel!.centerAddress.trim(),
+                                            style: TextStyle(fontSize: 12, color: textSecondary),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                   Text(
                                     '$currentDistrict • $currentArea',
                                     style: TextStyle(fontSize: 12, color: textSecondary),
@@ -413,14 +458,86 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
                                         borderSide: BorderSide(color: borderColor),
                                       ),
                                     ),
+                                    selectedItemBuilder: (context) {
+                                      return _allCenters.map((center) {
+                                        return Text(
+                                          center.centerAddress.trim().isNotEmpty
+                                              ? '${center.centerName} (${center.centerAddress.trim()})'
+                                              : center.centerName,
+                                          style: const TextStyle(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        );
+                                      }).toList();
+                                    },
                                     items: _allCenters.map((center) {
                                       return DropdownMenuItem<CenterModel>(
                                         value: center,
-                                        child: Text(
-                                          center.displayNameWithAddress,
-                                          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    center.centerName,
+                                                    style: const TextStyle(
+                                                      fontSize: 13.5,
+                                                      fontWeight: FontWeight.w700,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: isDark
+                                                        ? const Color(0xFF262633)
+                                                        : const Color(0xFFEFEFF4),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    '${center.district} • ${center.area}',
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: textSecondary,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            if (center.centerAddress.trim().isNotEmpty) ...[
+                                              const SizedBox(height: 2),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.location_on_outlined,
+                                                    size: 11,
+                                                    color: textSecondary,
+                                                  ),
+                                                  const SizedBox(width: 3),
+                                                  Expanded(
+                                                    child: Text(
+                                                      center.centerAddress.trim(),
+                                                      style: TextStyle(
+                                                        fontSize: 11.5,
+                                                        color: textSecondary,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                       );
                                     }).toList(),
@@ -432,13 +549,58 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
                                     validator: (val) => val == null ? 'Please select a destination center' : null,
                                   ),
                                   if (_selectedTargetCenter != null) ...[
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      '${_selectedTargetCenter!.district} • ${_selectedTargetCenter!.area}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: primaryColor,
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: primaryColor.withValues(alpha: isDark ? 0.12 : 0.06),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: primaryColor.withValues(alpha: 0.25),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Icon(Icons.info_outline_rounded, size: 14, color: primaryColor),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                '${_selectedTargetCenter!.district} • ${_selectedTargetCenter!.area}',
+                                                style: TextStyle(
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: primaryColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (_selectedTargetCenter!.centerAddress.trim().isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Icon(
+                                                  Icons.location_on_outlined,
+                                                  size: 13,
+                                                  color: textSecondary,
+                                                ),
+                                                const SizedBox(width: 5),
+                                                Expanded(
+                                                  child: Text(
+                                                    _selectedTargetCenter!.centerAddress.trim(),
+                                                    style: TextStyle(
+                                                      fontSize: 11.5,
+                                                      color: textSecondary,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     ),
                                   ],

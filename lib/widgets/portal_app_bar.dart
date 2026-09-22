@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/member.dart';
-import '../screens/add_member_screen.dart';
-import '../screens/portal_menu_screen.dart';
+import '../screens/members/add_member_screen.dart';
+import '../screens/portal/portal_menu_screen.dart';
 import '../services/firestore_service.dart';
 
 class PortalAppBar extends StatelessWidget implements PreferredSizeWidget {

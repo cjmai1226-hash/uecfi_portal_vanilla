@@ -1,11 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/center_model.dart';
-import '../models/member.dart';
-import '../services/database_service.dart';
-import '../services/firestore_service.dart';
-import 'member_details_screen.dart';
+import '../../models/center_model.dart';
+import '../../models/member.dart';
+import '../../services/database_service.dart';
+import '../../services/firestore_service.dart';
+import '../../widgets/animated_progress_circle.dart';
+import '../members/member_details_screen.dart';
 
 class CenterDetailsScreen extends StatefulWidget {
   final CenterModel center;
@@ -91,77 +92,7 @@ class _CenterDetailsScreenState extends State<CenterDetailsScreen> {
     CenterModel center,
     List<CenterModel> allCenters,
   ) {
-    final mCenter = m.center.trim().toLowerCase();
-    final cName = center.centerName.trim().toLowerCase();
-    final cDisplay = center.displayNameWithAddress.trim().toLowerCase();
-    final cAddr = center.centerAddress.trim().toLowerCase();
-
-    if (mCenter.isEmpty) return false;
-
-    // 1. Exact match with display name including address
-    if (mCenter == cDisplay) return true;
-
-    // 2. Exact match with center name
-    if (mCenter == cName) {
-      final hasSameNameSiblings = allCenters
-          .where(
-            (other) =>
-                other.centerName.trim().toLowerCase() == cName &&
-                (other.centerAddress.trim().toLowerCase() != cAddr ||
-                    other.area.trim().toLowerCase() !=
-                        center.area.trim().toLowerCase()),
-          )
-          .isNotEmpty;
-
-      if (hasSameNameSiblings) {
-        if (m.area.trim().isNotEmpty && center.area.trim().isNotEmpty) {
-          if (m.area.trim().toLowerCase() == center.area.trim().toLowerCase()) {
-            return true;
-          }
-        }
-        if (cAddr.isNotEmpty &&
-            (m.municipality.trim().isNotEmpty ||
-                m.province.trim().isNotEmpty ||
-                m.barangay.trim().isNotEmpty)) {
-          final mLoc = '${m.barangay} ${m.municipality} ${m.province}'
-              .toLowerCase();
-          if (cAddr.split(',').any((part) {
-            final p = part.trim();
-            return p.isNotEmpty && mLoc.contains(p);
-          })) {
-            return true;
-          }
-        }
-        if (m.district.trim().isNotEmpty &&
-            center.district.trim().isNotEmpty &&
-            m.district.trim().toLowerCase() ==
-                center.district.trim().toLowerCase()) {
-          final sameDistrictSiblings = allCenters
-              .where(
-                (other) =>
-                    other.centerName.trim().toLowerCase() == cName &&
-                    other.district.trim().toLowerCase() ==
-                        center.district.trim().toLowerCase() &&
-                    (other.centerAddress.trim().toLowerCase() != cAddr ||
-                        other.area.trim().toLowerCase() !=
-                            center.area.trim().toLowerCase()),
-              )
-              .isNotEmpty;
-          if (!sameDistrictSiblings) return true;
-        }
-        return false;
-      }
-      return true;
-    }
-
-    // 3. String contains both name and address
-    if (cAddr.isNotEmpty &&
-        mCenter.contains(cName) &&
-        mCenter.contains(cAddr)) {
-      return true;
-    }
-
-    return false;
+    return center.matchesMember(m, allCenters);
   }
 
   Widget _buildModalSectionHeader(String title, Color color) {
@@ -257,8 +188,8 @@ class _CenterDetailsScreenState extends State<CenterDetailsScreen> {
 
     final oldCount = centerMembers.where((m) => m.memberType.trim().toLowerCase() == 'old').length;
     final newCount = centerMembers.where((m) => m.memberType.trim().toLowerCase() == 'new').length;
-    final completeCount = centerMembers.where((m) => m.isProfileComplete).length;
-    final incompleteCount = centerMembers.where((m) => !m.isProfileComplete).length;
+    final completeCount = centerMembers.where((m) => !m.isInactive && m.isProfileComplete).length;
+    final incompleteCount = centerMembers.where((m) => !m.isInactive && !m.isProfileComplete).length;
     final activeCount = centerMembers.where((m) => !m.isInactive).length;
     final inactiveCount = centerMembers.where((m) => m.isInactive).length;
     final adultCount = centerMembers.where((m) => m.dynamicCategory.toLowerCase() == 'adult' || m.category.toLowerCase() == 'adult').length;
@@ -704,11 +635,11 @@ class _CenterDetailsScreenState extends State<CenterDetailsScreen> {
               return false;
             }
 
-            // Completeness filter: Complete / Incomplete
-            if (_selectedCompleteness == 'Complete' && !m.isProfileComplete) {
+            // Completeness filter: Complete / Incomplete (excludes Inactive members)
+            if (_selectedCompleteness == 'Complete' && (m.isInactive || !m.isProfileComplete)) {
               return false;
             }
-            if (_selectedCompleteness == 'Incomplete' && m.isProfileComplete) {
+            if (_selectedCompleteness == 'Incomplete' && (m.isInactive || m.isProfileComplete)) {
               return false;
             }
 
@@ -836,38 +767,17 @@ class _CenterDetailsScreenState extends State<CenterDetailsScreen> {
                                 ),
                                 const SizedBox(width: 14),
 
-                                // Completeness Circular Progress
-                                Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 58,
-                                      height: 58,
-                                      child: CircularProgressIndicator(
-                                        value: completenessRate,
-                                        strokeWidth: 5.5,
-                                        strokeCap: StrokeCap.round,
-                                        backgroundColor: isDark
-                                            ? Colors.white.withValues(alpha: 0.08)
-                                            : Colors.black.withValues(alpha: 0.06),
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          completenessRate >= 0.8
-                                              ? const Color(0xFF00C853)
-                                              : (completenessRate >= 0.5
-                                                  ? Colors.amber.shade800
-                                                  : Colors.orange),
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      '${(completenessRate * 100).toStringAsFixed(0)}%',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w800,
-                                        color: textPrimary,
-                                      ),
-                                    ),
-                                  ],
+                                // Animated Completeness Circular Progress
+                                AnimatedProgressCircle(
+                                  value: completenessRate,
+                                  size: 58,
+                                  strokeWidth: 5.5,
+                                  isDark: isDark,
+                                  textStyle: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: textPrimary,
+                                  ),
                                 ),
                               ],
                             ),
@@ -1359,7 +1269,7 @@ class _CenterDetailsScreenState extends State<CenterDetailsScreen> {
                                   ),
 
                                   // Missing Fields Checklist Tags for Incomplete Profiles
-                                  if (!isComplete && missing.isNotEmpty) ...[
+                                  if (!member.isInactive && !isComplete && missing.isNotEmpty) ...[
                                     const SizedBox(height: 10),
                                     Wrap(
                                       spacing: 6,

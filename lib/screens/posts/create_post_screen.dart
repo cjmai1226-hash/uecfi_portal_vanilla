@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../models/member.dart';
-import '../models/post.dart';
-import '../services/firestore_service.dart';
-import '../widgets/formatted_post_text.dart';
+import '../../models/member.dart';
+import '../../models/post.dart';
+import '../../services/firestore_service.dart';
+import '../../widgets/formatted_post_text.dart';
 
 class CreatePostScreen extends StatefulWidget {
   final Post? postToEdit;
@@ -26,18 +26,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   late final TextEditingController _contentController;
   final FocusNode _contentFocusNode = FocusNode();
 
-  String _selectedCategory = 'Announcement';
-  bool _isPinned = false;
   bool _isLoading = false;
   bool _showPreview = false;
-
-  static const List<String> _categories = [
-    'Announcement',
-    'Pastoral Letter',
-    'Update',
-    'Event',
-    'General',
-  ];
 
   @override
   void initState() {
@@ -45,8 +35,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     final edit = widget.postToEdit;
     _titleController = TextEditingController(text: edit?.title ?? '');
     _contentController = TextEditingController(text: edit?.content ?? '');
-    _selectedCategory = edit?.category ?? 'Announcement';
-    _isPinned = edit?.isPinned ?? false;
 
     _contentController.addListener(() {
       setState(() {});
@@ -224,8 +212,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         final updatedPost = widget.postToEdit!.copyWith(
           title: title,
           content: _contentController.text.trim(),
-          category: _selectedCategory,
-          isPinned: _isPinned,
+          category: widget.postToEdit?.category ?? '',
+          isPinned: false,
         );
 
         await _firestoreService.updatePost(updatedPost);
@@ -250,9 +238,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           authorProfileUrl: authorProfileUrl,
           title: title,
           content: _contentController.text.trim(),
-          category: _selectedCategory,
+          category: '',
           createdAt: DateTime.now().toIso8601String(),
-          isPinned: _isPinned,
+          isPinned: false,
         );
 
         await _firestoreService.createPost(newPost);
@@ -586,55 +574,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
                 const SizedBox(height: 18),
 
-                // Category Selector Chips
-                Text(
-                  'CATEGORY',
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _categories.map((cat) {
-                      final isSelected = _selectedCategory == cat;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: ChoiceChip(
-                          label: Text(cat),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() {
-                                _selectedCategory = cat;
-                              });
-                            }
-                          },
-                          selectedColor: primaryColor.withValues(alpha: 0.15),
-                          labelStyle: TextStyle(
-                            fontSize: 13,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? primaryColor : textSecondary,
-                          ),
-                          side: BorderSide(
-                            color: isSelected ? primaryColor : borderColor,
-                            width: 1.2,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-
-                const SizedBox(height: 18),
-
                 // Post Title Field
                 TextFormField(
                   controller: _titleController,
@@ -792,43 +731,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     ),
                   ),
                 ],
-
-                const SizedBox(height: 18),
-
-                // Pin Post Switch Card
-                Container(
-                  decoration: BoxDecoration(
-                    color: cardBg,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: SwitchListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                    secondary: Icon(
-                      Icons.push_pin_rounded,
-                      color: _isPinned ? primaryColor : textSecondary,
-                    ),
-                    title: Text(
-                      'Pin Post to Top',
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w600,
-                        color: textPrimary,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Pinned posts stay prominently featured at the top of the feed',
-                      style: TextStyle(fontSize: 12, color: textSecondary),
-                    ),
-                    value: _isPinned,
-                    activeTrackColor: primaryColor,
-                    onChanged: (val) {
-                      setState(() {
-                        _isPinned = val;
-                      });
-                    },
-                  ),
-                ),
 
                 const SizedBox(height: 32),
               ],

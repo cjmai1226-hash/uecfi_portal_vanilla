@@ -31,14 +31,24 @@ class DatabaseService {
     final file = File(path);
     bool shouldCopy = true;
 
-    if (await file.exists()) {
-      final size = await file.length();
-      if (size > 10000) {
+    ByteData? data;
+    try {
+      data = await rootBundle.load('assets/db/uecfi_portal.db');
+    } catch (e) {
+      debugPrint('Error loading asset database: $e');
+    }
+
+    if (data != null && await file.exists()) {
+      final existingSize = await file.length();
+      final assetSize = data.lengthInBytes;
+
+      // In debug mode or if asset size has changed, update with the latest asset database
+      if (!kDebugMode && existingSize == assetSize) {
         shouldCopy = false;
       }
     }
 
-    if (shouldCopy) {
+    if (shouldCopy && data != null) {
       try {
         await Directory(dirname(path)).create(recursive: true);
       } catch (e) {
@@ -46,16 +56,14 @@ class DatabaseService {
       }
 
       try {
-        final ByteData data =
-            await rootBundle.load('assets/db/uecfi_portal.db');
         final List<int> bytes =
             data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
 
         await file.writeAsBytes(bytes, flush: true);
         debugPrint(
-            'Database copied successfully to $path (size: ${bytes.length} bytes)');
+            'Database updated successfully to $path (size: ${bytes.length} bytes)');
       } catch (e) {
-        debugPrint('Error loading asset database: $e');
+        debugPrint('Error writing asset database: $e');
       }
     }
 
