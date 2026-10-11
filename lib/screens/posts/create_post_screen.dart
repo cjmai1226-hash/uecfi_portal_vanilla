@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../models/member.dart';
 import '../../models/post.dart';
 import '../../services/firestore_service.dart';
@@ -314,7 +315,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 ),
               ),
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
+                icon: AppIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: textPrimary, size: 24),
                 color: textPrimary,
                 onPressed: () => Navigator.of(context).pop(),
               ),
@@ -331,8 +332,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                         color: const Color(0xFFFF2A55).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.lock_person_rounded,
+                      child: const AppIcon(
+                        icon: HugeIcons.strokeRoundedUserShield01,
                         size: 48,
                         color: Color(0xFFFF2A55),
                       ),
@@ -423,9 +424,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             actions: [
               IconButton(
                 tooltip: _showPreview ? 'Edit mode' : 'Preview formatting',
-                icon: Icon(
-                  _showPreview ? Icons.edit_note_rounded : Icons.visibility_outlined,
+                icon: AppIcon(
+                  icon: _showPreview ? HugeIcons.strokeRoundedEdit02 : HugeIcons.strokeRoundedView,
                   color: primaryColor,
+                  size: 22,
                 ),
                 onPressed: () {
                   setState(() {
@@ -621,7 +623,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.visibility_rounded, size: 16, color: primaryColor),
+                            AppIcon(icon: HugeIcons.strokeRoundedView, size: 16, color: primaryColor),
                             const SizedBox(width: 6),
                             Text(
                               'POST PREVIEW',
@@ -666,13 +668,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     child: Row(
                       children: [
                         _buildFormatBtn(
-                          icon: Icons.format_bold_rounded,
+                          icon: HugeIcons.strokeRoundedTextBold,
                           tooltip: 'Bold (**text**)',
                           onTap: _formatBold,
                           primaryColor: primaryColor,
                         ),
                         _buildFormatBtn(
-                          icon: Icons.format_italic_rounded,
+                          icon: HugeIcons.strokeRoundedTextItalic,
                           tooltip: 'Italic (*text*)',
                           onTap: _formatItalic,
                           primaryColor: primaryColor,
@@ -681,13 +683,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                         Container(height: 20, width: 1, color: borderColor),
                         const SizedBox(width: 4),
                         _buildFormatBtn(
-                          icon: Icons.format_list_bulleted_rounded,
+                          icon: HugeIcons.strokeRoundedList,
                           tooltip: 'Bullet List (• item)',
                           onTap: _formatBullet,
                           primaryColor: primaryColor,
                         ),
                         _buildFormatBtn(
-                          icon: Icons.format_list_numbered_rounded,
+                          icon: HugeIcons.strokeRoundedListOrdered,
                           tooltip: 'Numbered List (1. item)',
                           onTap: _formatNumbered,
                           primaryColor: primaryColor,
@@ -742,7 +744,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Widget _buildFormatBtn({
-    required IconData icon,
+    required List<List<dynamic>> icon,
     required String tooltip,
     required VoidCallback onTap,
     required Color primaryColor,
@@ -756,7 +758,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Icon(icon, size: 20, color: primaryColor),
+            child: AppIcon(icon: icon, size: 20, color: primaryColor),
           ),
         ),
       ),

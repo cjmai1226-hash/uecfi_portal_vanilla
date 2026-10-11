@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../widgets/portal_app_bar.dart';
 import '../finance/finance_screen.dart';
 import 'home_screen.dart';
@@ -26,6 +27,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final unselectedColor = isDark ? const Color(0xFF9E9EB2) : const Color(0xFF6B6B80);
 
     return Scaffold(
       appBar: const PortalAppBar(),
@@ -45,23 +47,55 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         elevation: 6,
         destinations: [
           NavigationDestination(
-            icon: const Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard_rounded, color: primaryColor),
+            icon: AppIcon(
+              icon: HugeIcons.strokeRoundedHome01,
+              color: unselectedColor,
+              size: 24,
+            ),
+            selectedIcon: AppIcon(
+              icon: HugeIcons.strokeRoundedHome01,
+              color: primaryColor,
+              size: 24,
+            ),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: const Icon(Icons.people_alt_outlined),
-            selectedIcon: Icon(Icons.people_alt_rounded, color: primaryColor),
+            icon: AppIcon(
+              icon: HugeIcons.strokeRoundedUserGroup,
+              color: unselectedColor,
+              size: 24,
+            ),
+            selectedIcon: AppIcon(
+              icon: HugeIcons.strokeRoundedUserGroup,
+              color: primaryColor,
+              size: 24,
+            ),
             label: 'Members',
           ),
           NavigationDestination(
-            icon: const Icon(Icons.account_balance_wallet_outlined),
-            selectedIcon: Icon(Icons.account_balance_wallet_rounded, color: primaryColor),
+            icon: AppIcon(
+              icon: HugeIcons.strokeRoundedWallet01,
+              color: unselectedColor,
+              size: 24,
+            ),
+            selectedIcon: AppIcon(
+              icon: HugeIcons.strokeRoundedWallet01,
+              color: primaryColor,
+              size: 24,
+            ),
             label: 'Finance',
           ),
           NavigationDestination(
-            icon: const Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart_rounded, color: primaryColor),
+            icon: AppIcon(
+              icon: HugeIcons.strokeRoundedAnalytics01,
+              color: unselectedColor,
+              size: 24,
+            ),
+            selectedIcon: AppIcon(
+              icon: HugeIcons.strokeRoundedAnalytics01,
+              color: primaryColor,
+              size: 24,
+            ),
             label: 'Stats',
           ),
         ],

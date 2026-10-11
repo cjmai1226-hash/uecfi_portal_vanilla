@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../models/member.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
@@ -15,18 +16,21 @@ import '../transfers/transfer_requests_screen.dart';
 class PortalMenuScreen extends StatelessWidget {
   const PortalMenuScreen({super.key});
 
-
-  void _showDataManagementMaintenance(BuildContext context) {
+  void _showDataManagementStatus(BuildContext context) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Row(
           children: [
-            Icon(Icons.construction_rounded, color: Colors.white, size: 20),
+            AppIcon(
+              icon: HugeIcons.strokeRoundedCheckmarkCircle02,
+              color: Colors.white,
+              size: 20,
+            ),
             SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Data management has been disabled for now under maintenance.',
+                'Cloud storage sync is active. All member media is optimized in Firebase Cloud Storage.',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w500,
@@ -37,7 +41,7 @@ class PortalMenuScreen extends StatelessWidget {
           ],
         ),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFFA100FF),
+        backgroundColor: const Color(0xFF00C853),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         duration: const Duration(seconds: 4),
       ),
@@ -45,6 +49,9 @@ class PortalMenuScreen extends StatelessWidget {
   }
 
   void _showThemeDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? const Color(0xFFF5F5FA) : const Color(0xFF0E0E14);
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -67,9 +74,18 @@ class PortalMenuScreen extends StatelessWidget {
                   ),
                 ),
                 ListTile(
+                  leading: AppIcon(
+                    icon: HugeIcons.strokeRoundedSun03,
+                    color: textPrimary,
+                    size: 22,
+                  ),
                   title: const Text('Light Mode'),
                   trailing: currentMode == ThemeMode.light
-                      ? const Icon(Icons.check_rounded, color: Color(0xFFA100FF))
+                      ? AppIcon(
+                          icon: HugeIcons.strokeRoundedCheckmarkBadge01,
+                          color: textPrimary,
+                          size: 20,
+                        )
                       : null,
                   onTap: () {
                     ThemeService.instance.setThemeMode(ThemeMode.light);
@@ -77,9 +93,18 @@ class PortalMenuScreen extends StatelessWidget {
                   },
                 ),
                 ListTile(
+                  leading: AppIcon(
+                    icon: HugeIcons.strokeRoundedMoon02,
+                    color: textPrimary,
+                    size: 22,
+                  ),
                   title: const Text('Dark Mode'),
                   trailing: currentMode == ThemeMode.dark
-                      ? const Icon(Icons.check_rounded, color: Color(0xFFA100FF))
+                      ? AppIcon(
+                          icon: HugeIcons.strokeRoundedCheckmarkBadge01,
+                          color: textPrimary,
+                          size: 20,
+                        )
                       : null,
                   onTap: () {
                     ThemeService.instance.setThemeMode(ThemeMode.dark);
@@ -87,9 +112,18 @@ class PortalMenuScreen extends StatelessWidget {
                   },
                 ),
                 ListTile(
+                  leading: AppIcon(
+                    icon: HugeIcons.strokeRoundedComputer,
+                    color: textPrimary,
+                    size: 22,
+                  ),
                   title: const Text('System Default'),
                   trailing: currentMode == ThemeMode.system
-                      ? const Icon(Icons.check_rounded, color: Color(0xFFA100FF))
+                      ? AppIcon(
+                          icon: HugeIcons.strokeRoundedCheckmarkBadge01,
+                          color: textPrimary,
+                          size: 20,
+                        )
                       : null,
                   onTap: () {
                     ThemeService.instance.setThemeMode(ThemeMode.system);
@@ -142,7 +176,6 @@ class PortalMenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Theme.of(context).colorScheme.primary;
     final textPrimary = isDark ? const Color(0xFFF5F5FA) : const Color(0xFF0E0E14);
     final textSecondary = isDark ? const Color(0xFF9E9EAF) : const Color(0xFF6E6E82);
     final borderColor = isDark ? const Color(0xFF262633) : const Color(0xFFE5E5ED);
@@ -161,7 +194,6 @@ class PortalMenuScreen extends StatelessWidget {
         final canManageTransfers = isAdmin || isDistrictAdmin;
         final canAccessAdminTools = canCreateDistrictPosts || canViewActivityLogs || canManageTransfers || isAdmin;
         final roleDisplayName = currentMember?.roleDisplayName ?? (isAdmin ? 'Administrator' : (isDistrictAdmin ? 'District Admin' : 'Member'));
-        final roleColor = currentMember?.roleColor ?? (isDistrictAdmin ? const Color(0xFF00B0FF) : primaryColor);
 
         final fullName = currentMember != null && currentMember.fullName.trim().isNotEmpty
             ? currentMember.fullName.trim()
@@ -174,6 +206,11 @@ class PortalMenuScreen extends StatelessWidget {
         final memberIdText = currentMember != null && currentMember.memberId.isNotEmpty
             ? 'Member ID: ${currentMember.memberId}'
             : (currentUser?.email ?? 'Logged In');
+
+        final imageProvider = currentMember?.profileImageProvider ??
+            (currentUser?.photoURL != null && currentUser!.photoURL!.isNotEmpty
+                ? NetworkImage(currentUser.photoURL!)
+                : null);
 
         return Scaffold(
           appBar: AppBar(
@@ -188,7 +225,11 @@ class PortalMenuScreen extends StatelessWidget {
             elevation: 0,
             scrolledUnderElevation: 1,
             leading: IconButton(
-              icon: const Icon(Icons.close_rounded, size: 26),
+              icon: AppIcon(
+                icon: HugeIcons.strokeRoundedCancel01,
+                size: 24,
+                color: textPrimary,
+              ),
               color: textPrimary,
               onPressed: () => Navigator.of(context).pop(),
             ),
@@ -217,16 +258,19 @@ class PortalMenuScreen extends StatelessWidget {
                   child: Row(
                     children: [
                       CircleAvatar(
-                        radius: 24,
-                        backgroundColor: roleColor.withValues(alpha: 0.15),
-                        child: Text(
-                          fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U',
-                          style: TextStyle(
-                            color: roleColor,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        radius: 26,
+                        backgroundColor: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08),
+                        backgroundImage: imageProvider,
+                        child: imageProvider == null
+                            ? Text(
+                                fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U',
+                                style: TextStyle(
+                                  color: textPrimary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            : null,
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -258,16 +302,16 @@ class PortalMenuScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                               decoration: BoxDecoration(
-                                color: roleColor.withValues(alpha: isDark ? 0.22 : 0.12),
+                                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: roleColor.withValues(alpha: 0.4)),
+                                border: Border.all(color: borderColor),
                               ),
                               child: Text(
                                 roleDisplayName.toUpperCase(),
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
-                                  color: roleColor,
+                                  color: textPrimary,
                                   letterSpacing: 0.8,
                                 ),
                               ),
@@ -285,7 +329,7 @@ class PortalMenuScreen extends StatelessWidget {
                 if (canAccessAdminTools) ...[
                   _buildSectionHeader(
                     title: 'ADMINISTRATION AND TOOLS',
-                    primaryColor: primaryColor,
+                    color: textSecondary,
                   ),
                   const SizedBox(height: 6),
                   if (canCreateDistrictPosts) ...[
@@ -294,6 +338,7 @@ class PortalMenuScreen extends StatelessWidget {
                       subtitle: 'Publish announcements, updates, and pastoral letters',
                       textPrimary: textPrimary,
                       textSecondary: textSecondary,
+                      icon: HugeIcons.strokeRoundedEdit02,
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const CreatePostScreen()),
@@ -308,6 +353,7 @@ class PortalMenuScreen extends StatelessWidget {
                       subtitle: 'System audit trails and member records event history',
                       textPrimary: textPrimary,
                       textSecondary: textSecondary,
+                      icon: HugeIcons.strokeRoundedAudit01,
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const ActivityLogsScreen()),
@@ -326,17 +372,18 @@ class PortalMenuScreen extends StatelessWidget {
                           subtitle: 'Review and verify member center transfers',
                           textPrimary: textPrimary,
                           textSecondary: textSecondary,
+                          icon: HugeIcons.strokeRoundedArrowLeftRight,
                           trailingWidget: pendingCount > 0
                               ? Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFFF9100),
+                                    color: textPrimary,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
                                     '$pendingCount',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: isDark ? Colors.black : Colors.white,
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -359,6 +406,7 @@ class PortalMenuScreen extends StatelessWidget {
                       subtitle: 'View administrative users and manage member roles',
                       textPrimary: textPrimary,
                       textSecondary: textSecondary,
+                      icon: HugeIcons.strokeRoundedUserShield01,
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const RoleManagementScreen()),
@@ -368,10 +416,11 @@ class PortalMenuScreen extends StatelessWidget {
                     _buildDivider(borderColor),
                     _buildMenuItem(
                       title: 'Data Management',
-                      subtitle: 'Database sync, backups, and district data export',
+                      subtitle: 'Cloud storage synchronized & database optimized',
                       textPrimary: textPrimary,
                       textSecondary: textSecondary,
-                      onTap: () => _showDataManagementMaintenance(context),
+                      icon: HugeIcons.strokeRoundedDatabaseSync01,
+                      onTap: () => _showDataManagementStatus(context),
                     ),
                   ],
                   const SizedBox(height: 24),
@@ -380,7 +429,7 @@ class PortalMenuScreen extends StatelessWidget {
                 // Section 2: Documents and Forms
                 _buildSectionHeader(
                   title: 'DOCUMENTS AND FORMS',
-                  primaryColor: primaryColor,
+                  color: textSecondary,
                 ),
                 const SizedBox(height: 6),
                 _buildMenuItem(
@@ -388,6 +437,7 @@ class PortalMenuScreen extends StatelessWidget {
                   subtitle: 'Member and center application forms and guidelines',
                   textPrimary: textPrimary,
                   textSecondary: textSecondary,
+                  icon: HugeIcons.strokeRoundedFile01,
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const FormsTemplatesScreen()),
@@ -400,6 +450,7 @@ class PortalMenuScreen extends StatelessWidget {
                   subtitle: 'Official district governance and doctrinal bylaws',
                   textPrimary: textPrimary,
                   textSecondary: textSecondary,
+                  icon: HugeIcons.strokeRoundedBook02,
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -414,7 +465,7 @@ class PortalMenuScreen extends StatelessWidget {
                 // Section 3: Legal and About
                 _buildSectionHeader(
                   title: 'LEGAL AND ABOUT',
-                  primaryColor: primaryColor,
+                  color: textSecondary,
                 ),
                 const SizedBox(height: 6),
                 _buildMenuItem(
@@ -422,6 +473,7 @@ class PortalMenuScreen extends StatelessWidget {
                   subtitle: 'User account terms, portal rules, and service conditions',
                   textPrimary: textPrimary,
                   textSecondary: textSecondary,
+                  icon: HugeIcons.strokeRoundedLegalDocument01,
                   onTap: () => LegalAboutSheet.show(context, LegalDocType.termsOfService),
                 ),
                 _buildDivider(borderColor),
@@ -430,6 +482,7 @@ class PortalMenuScreen extends StatelessWidget {
                   subtitle: 'Member record confidentiality and RA 10173 compliance',
                   textPrimary: textPrimary,
                   textSecondary: textSecondary,
+                  icon: HugeIcons.strokeRoundedShieldCheck,
                   onTap: () => LegalAboutSheet.show(context, LegalDocType.privacyPolicy),
                 ),
                 _buildDivider(borderColor),
@@ -438,6 +491,7 @@ class PortalMenuScreen extends StatelessWidget {
                   subtitle: 'Christ-centered code of conduct and communication ethics',
                   textPrimary: textPrimary,
                   textSecondary: textSecondary,
+                  icon: HugeIcons.strokeRoundedChurch,
                   onTap: () => LegalAboutSheet.show(context, LegalDocType.communityStandards),
                 ),
                 _buildDivider(borderColor),
@@ -446,6 +500,7 @@ class PortalMenuScreen extends StatelessWidget {
                   subtitle: 'Central District 3 Portal details and version information',
                   textPrimary: textPrimary,
                   textSecondary: textSecondary,
+                  icon: HugeIcons.strokeRoundedInformationCircle,
                   onTap: () => LegalAboutSheet.show(context, LegalDocType.about),
                 ),
 
@@ -454,7 +509,7 @@ class PortalMenuScreen extends StatelessWidget {
                 // Section 4: Preferences and System
                 _buildSectionHeader(
                   title: 'PREFERENCES AND SYSTEM',
-                  primaryColor: primaryColor,
+                  color: textSecondary,
                 ),
                 const SizedBox(height: 6),
                 _buildMenuItem(
@@ -462,15 +517,16 @@ class PortalMenuScreen extends StatelessWidget {
                   subtitle: isDark ? 'Dark Theme' : 'Light Theme',
                   textPrimary: textPrimary,
                   textSecondary: textSecondary,
+                  icon: HugeIcons.strokeRoundedPaintBoard,
                   onTap: () => _showThemeDialog(context),
                 ),
                 _buildDivider(borderColor),
                 _buildMenuItem(
                   title: 'Sign out of Portal',
                   subtitle: 'End current session and return to login screen',
-                  textPrimary: const Color(0xFFFF2A55),
+                  textPrimary: textPrimary,
                   textSecondary: textSecondary,
-                  chevronColor: const Color(0xFFFF2A55),
+                  icon: HugeIcons.strokeRoundedLogout01,
                   onTap: () => _handleSignOut(context),
                 ),
 
@@ -485,14 +541,14 @@ class PortalMenuScreen extends StatelessWidget {
 
   Widget _buildSectionHeader({
     required String title,
-    required Color primaryColor,
+    required Color color,
   }) {
     return Padding(
       padding: const EdgeInsets.only(left: 4.0, bottom: 4.0),
       child: Text(
         title,
         style: TextStyle(
-          color: primaryColor,
+          color: color,
           fontSize: 11.5,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.4,
@@ -506,6 +562,8 @@ class PortalMenuScreen extends StatelessWidget {
     required String subtitle,
     required Color textPrimary,
     required Color textSecondary,
+    List<List<dynamic>>? icon,
+    Color? iconColor,
     Color? chevronColor,
     Widget? trailingWidget,
     required VoidCallback onTap,
@@ -513,6 +571,13 @@ class PortalMenuScreen extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: icon != null
+          ? AppIcon(
+              icon: icon,
+              color: iconColor ?? textPrimary,
+              size: 24,
+            )
+          : null,
       title: Text(
         title,
         style: TextStyle(
@@ -535,9 +600,9 @@ class PortalMenuScreen extends StatelessWidget {
             trailingWidget,
             const SizedBox(width: 4),
           ],
-          Icon(
-            Icons.chevron_right_rounded,
-            size: 22,
+          AppIcon(
+            icon: HugeIcons.strokeRoundedArrowRight01,
+            size: 18,
             color: chevronColor ?? textSecondary,
           ),
         ],

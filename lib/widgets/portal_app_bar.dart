@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'app_icon.dart';
 import '../models/member.dart';
 import '../screens/members/add_member_screen.dart';
 import '../screens/portal/portal_menu_screen.dart';
@@ -24,18 +26,24 @@ class PortalAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
-    final textPrimary = isDark ? const Color(0xFFF5F5FA) : const Color(0xFF0E0E14);
+    final textPrimary = isDark
+        ? const Color(0xFFF5F5FA)
+        : const Color(0xFF0E0E14);
 
     return AppBar(
       backgroundColor: isDark ? const Color(0xFF16161F) : Colors.white,
       elevation: 0,
       scrolledUnderElevation: 1,
-      centerTitle: true,
+      centerTitle: false,
       leading: IconButton(
-        icon: const Icon(Icons.menu_rounded, size: 26),
-        color: textPrimary,
+        icon: AppIcon(
+          icon: HugeIcons.strokeRoundedMenu01,
+          size: 24,
+          color: textPrimary,
+        ),
         tooltip: 'Portal Menu',
-        onPressed: onMenuPressed ??
+        onPressed:
+            onMenuPressed ??
             () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -44,18 +52,14 @@ class PortalAppBar extends StatelessWidget implements PreferredSizeWidget {
               );
             },
       ),
-      title: Image.asset(
-        'assets/images/uecfi_logo.png',
-        height: 38,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) => Text(
-          'UECFI',
-          style: TextStyle(
-            color: primaryColor,
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.5,
-          ),
+      titleSpacing: 4,
+      title: Text(
+        'uecfi portal',
+        style: GoogleFonts.plusJakartaSans(
+          color: primaryColor,
+          fontSize: 19,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.5,
         ),
       ),
       actions: [
@@ -66,14 +70,18 @@ class PortalAppBar extends StatelessWidget implements PreferredSizeWidget {
             final canAdd = currentMember == null || currentMember.canAddMembers;
 
             if (!canAdd) {
-              return const SizedBox(width: 8);
+              return const SizedBox.shrink();
             }
 
             return IconButton(
-              icon: const Icon(Icons.add_rounded, size: 26),
-              color: textPrimary,
+              icon: AppIcon(
+                icon: HugeIcons.strokeRoundedSquarePlus,
+                size: 24,
+                color: textPrimary,
+              ),
               tooltip: 'Add Member',
-              onPressed: onAddPressed ??
+              onPressed:
+                  onAddPressed ??
                   () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -84,7 +92,7 @@ class PortalAppBar extends StatelessWidget implements PreferredSizeWidget {
             );
           },
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 4),
       ],
     );
   }

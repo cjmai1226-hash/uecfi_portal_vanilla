@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import 'package:intl/intl.dart';
 import '../../models/member.dart';
 import '../../models/transfer_request.dart';
@@ -16,11 +17,19 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
   final FirestoreService _firestoreService = FirestoreService();
   final TextEditingController _searchController = TextEditingController();
   late TabController _tabController;
+  late final Stream<Member?> _currentMemberStream;
+  late final Stream<int> _pendingCountStream;
+  late final Stream<List<TransferRequest>> _pendingRequestsStream;
+  late final Stream<List<TransferRequest>> _historyRequestsStream;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _currentMemberStream = _firestoreService.getCurrentMemberStream();
+    _pendingCountStream = _firestoreService.getPendingTransfersCountStream();
+    _pendingRequestsStream = _firestoreService.getTransferRequestsStream(status: 'pending');
+    _historyRequestsStream = _firestoreService.getTransferRequestsStream(status: null);
   }
 
   @override
@@ -82,7 +91,7 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
                           color: primaryColor.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.swap_horiz_rounded, color: primaryColor, size: 22),
+                        child: AppIcon(icon: HugeIcons.strokeRoundedArrowLeftRight, color: primaryColor, size: 22),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -119,7 +128,7 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.person_outline_rounded, size: 20),
+                        const AppIcon(icon: HugeIcons.strokeRoundedUser, size: 20),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -175,7 +184,7 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
                           const SizedBox(height: 2),
                           Row(
                             children: [
-                              Icon(Icons.location_on_outlined, size: 12, color: textSecondary),
+                              AppIcon(icon: HugeIcons.strokeRoundedLocation01, size: 12, color: textSecondary),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
@@ -215,7 +224,7 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
                           const SizedBox(height: 2),
                           Row(
                             children: [
-                              const Icon(Icons.location_on_outlined, size: 12, color: Color(0xFF00B0FF)),
+                              const AppIcon(icon: HugeIcons.strokeRoundedLocation01, size: 12, color: Color(0xFF00B0FF)),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
@@ -501,7 +510,7 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
     final textSecondary = isDark ? const Color(0xFF9E9EAF) : const Color(0xFF6E6E82);
 
     return StreamBuilder<Member?>(
-      stream: _firestoreService.getCurrentMemberStream(),
+      stream: _currentMemberStream,
       builder: (context, memberSnapshot) {
         final currentMember = memberSnapshot.data;
         final hasAccess = currentMember != null &&
@@ -522,8 +531,8 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
                         color: const Color(0xFFFF2A55).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.lock_person_rounded,
+                      child: const AppIcon(
+                        icon: HugeIcons.strokeRoundedUserShield01,
                         size: 48,
                         color: Color(0xFFFF2A55),
                       ),
@@ -568,7 +577,7 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
             elevation: 0,
             scrolledUnderElevation: 1,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded),
+              icon: AppIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: textPrimary, size: 24),
               color: textPrimary,
               onPressed: () => Navigator.of(context).pop(),
             ),
@@ -576,7 +585,7 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
               controller: _tabController,
               tabs: [
                 StreamBuilder<int>(
-                  stream: _firestoreService.getPendingTransfersCountStream(),
+                  stream: _pendingCountStream,
                   builder: (context, countSnapshot) {
                     final pendingCount = countSnapshot.data ?? 0;
                     return Tab(
@@ -630,7 +639,7 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
     final textSecondary = isDark ? const Color(0xFF9E9EAF) : const Color(0xFF6E6E82);
 
     return StreamBuilder<List<TransferRequest>>(
-      stream: _firestoreService.getTransferRequestsStream(status: status),
+      stream: isPendingTab ? _pendingRequestsStream : _historyRequestsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -647,8 +656,8 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  isPendingTab ? Icons.check_circle_outline_rounded : Icons.history_rounded,
+                AppIcon(
+                  icon: isPendingTab ? HugeIcons.strokeRoundedCheckmarkCircle01 : HugeIcons.strokeRoundedTime02,
                   size: 48,
                   color: textSecondary.withValues(alpha: 0.5),
                 ),
@@ -799,7 +808,7 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Icon(Icons.arrow_forward_rounded, size: 18, color: textSecondary),
+                      child: AppIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: textSecondary),
                     ),
                     Expanded(
                       child: Column(
@@ -868,8 +877,8 @@ class _TransferRequestsScreenState extends State<TransferRequestsScreen>
                         ),
                       ),
                       const SizedBox(width: 2),
-                      Icon(
-                        Icons.chevron_right_rounded,
+                      AppIcon(
+                        icon: HugeIcons.strokeRoundedArrowRight01,
                         size: 16,
                         color: Theme.of(context).colorScheme.primary,
                       ),

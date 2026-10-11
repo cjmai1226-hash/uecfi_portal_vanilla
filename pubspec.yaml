@@ -1,7 +1,7 @@
 name: uecfi_portal_vanilla
 description: "A new Flutter project."
 publish_to: 'none'
-version: 2.1.0+18
+version: 2.1.0+20
 
 environment:
   sdk: ^3.11.5
@@ -16,6 +16,7 @@ dependencies:
   firebase_core: ^3.12.1
   cloud_firestore: ^5.6.5
   firebase_auth: ^5.5.1
+  firebase_storage: ^12.4.4
   cached_network_image: ^3.4.1
   intl: ^0.20.2
   philippines_rpcmb: ^0.0.3
@@ -24,6 +25,8 @@ dependencies:
   file_picker: ^8.1.6
   shared_preferences: ^2.3.5
   image: ^4.2.0
+  hugeicons: ^1.2.0
+  google_fonts: ^8.2.1
 
 dev_dependencies:
   flutter_test:

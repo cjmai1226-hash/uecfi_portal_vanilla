@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../services/auth_service.dart';
 import '../../theme/theme.dart';
 
@@ -176,8 +177,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     'assets/images/uecfi_pmm_logo.png',
                                     height: 85,
                                     fit: BoxFit.contain,
-                                    errorBuilder: (context, error, stackTrace) => Icon(
-                                      Icons.hub_rounded,
+                                    errorBuilder: (context, error, stackTrace) => AppIcon(
+                                      icon: HugeIcons.strokeRoundedChurch,
                                       size: 72,
                                       color: accentViolet,
                                     ),
@@ -256,7 +257,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                         decoration: InputDecoration(
                                           labelText: 'Email or Member ID',
                                           hintText: 'e.g. pastor@uecfi.org or 00001',
-                                          prefixIcon: const Icon(Icons.person_outline_rounded),
+                                          prefixIcon: const Center(
+                                            widthFactor: 1.0,
+                                            child: AppIcon(
+                                              icon: HugeIcons.strokeRoundedUser,
+                                              size: 20,
+                                            ),
+                                          ),
                                           errorText: _loginIdError,
                                         ),
                                         onChanged: (val) {
@@ -276,13 +283,19 @@ class _LoginScreenState extends State<LoginScreen> {
                                         decoration: InputDecoration(
                                           labelText: 'Password',
                                           hintText: 'Enter your password',
-                                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                                          prefixIcon: const Center(
+                                            widthFactor: 1.0,
+                                            child: AppIcon(
+                                              icon: HugeIcons.strokeRoundedLockKey,
+                                              size: 20,
+                                            ),
+                                          ),
                                           errorText: _passwordError,
                                           suffixIcon: IconButton(
-                                            icon: Icon(
-                                              _obscurePassword
-                                                  ? Icons.visibility_off_outlined
-                                                  : Icons.visibility_outlined,
+                                            icon: AppIcon(
+                                              icon: _obscurePassword
+                                                  ? HugeIcons.strokeRoundedViewOffSlash
+                                                  : HugeIcons.strokeRoundedView,
                                               size: 20,
                                             ),
                                             tooltip: _obscurePassword ? 'Show password' : 'Hide password',

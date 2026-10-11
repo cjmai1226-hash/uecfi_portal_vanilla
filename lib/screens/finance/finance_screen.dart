@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import 'package:intl/intl.dart';
 import '../../models/center_model.dart';
 import '../../models/member.dart';
@@ -30,10 +31,12 @@ class _FinanceScreenState extends State<FinanceScreen> {
   List<CenterModel> _databaseCenters = [];
   bool _isLoadingCenters = true;
   Member? _currentMember;
+  late final Stream<List<Member>> _membersStream;
 
   @override
   void initState() {
     super.initState();
+    _membersStream = _firestoreService.getMembersStream();
     _loadCenters();
     _firestoreService.getCurrentMember().then((user) {
       if (mounted && user != null) {
@@ -148,8 +151,8 @@ class _FinanceScreenState extends State<FinanceScreen> {
                         color: primaryColor.withValues(alpha: isDark ? 0.22 : 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(
-                        Icons.receipt_long_rounded,
+                      child: AppIcon(
+                        icon: HugeIcons.strokeRoundedInvoice01,
                         color: primaryColor,
                         size: 22,
                       ),
@@ -571,9 +574,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
                           isExpanded: true,
                           dropdownColor: isDark ? const Color(0xFF16161F) : Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          icon: Icon(
-                            isDistrictLocked ? Icons.lock_outline_rounded : Icons.keyboard_arrow_down_rounded,
-                            size: isDistrictLocked ? 16 : 22,
+                          icon: AppIcon(
+                            icon: isDistrictLocked
+                                ? HugeIcons.strokeRoundedLockKey
+                                : HugeIcons.strokeRoundedArrowDown01,
+                            size: isDistrictLocked ? 16 : 20,
                             color: isDistrictLocked ? Colors.grey : null,
                           ),
                           items: districts
@@ -624,9 +629,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
                           isExpanded: true,
                           dropdownColor: isDark ? const Color(0xFF16161F) : Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          icon: Icon(
-                            isAreaLocked ? Icons.lock_outline_rounded : Icons.keyboard_arrow_down_rounded,
-                            size: isAreaLocked ? 16 : 22,
+                          icon: AppIcon(
+                            icon: isAreaLocked
+                                ? HugeIcons.strokeRoundedLockKey
+                                : HugeIcons.strokeRoundedArrowDown01,
+                            size: isAreaLocked ? 16 : 20,
                             color: isAreaLocked ? Colors.grey : null,
                           ),
                           items: availableAreas
@@ -676,9 +683,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
                           isExpanded: true,
                           dropdownColor: isDark ? const Color(0xFF16161F) : Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          icon: Icon(
-                            isCenterLocked ? Icons.lock_outline_rounded : Icons.keyboard_arrow_down_rounded,
-                            size: isCenterLocked ? 16 : 22,
+                          icon: AppIcon(
+                            icon: isCenterLocked
+                                ? HugeIcons.strokeRoundedLockKey
+                                : HugeIcons.strokeRoundedArrowDown01,
+                            size: isCenterLocked ? 16 : 20,
                             color: isCenterLocked ? Colors.grey : null,
                           ),
                           items: availableCenters
@@ -758,7 +767,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
     return Scaffold(
       body: StreamBuilder<List<Member>>(
-        stream: _firestoreService.getMembersStream(),
+        stream: _membersStream,
         builder: (context, snapshot) {
           final allMembers = snapshot.data ?? [];
 
@@ -916,8 +925,8 @@ class _FinanceScreenState extends State<FinanceScreen> {
                                   ),
                                 ),
                                 IconButton(
-                                  icon: Icon(
-                                    Icons.info_outline_rounded,
+                                  icon: AppIcon(
+                                    icon: HugeIcons.strokeRoundedInformationCircle,
                                     color: primaryColor,
                                     size: 22,
                                   ),
@@ -1088,14 +1097,20 @@ class _FinanceScreenState extends State<FinanceScreen> {
                                     color: textSecondary.withValues(alpha: 0.7),
                                     fontSize: 13.5,
                                   ),
-                                  prefixIcon: Icon(
-                                    Icons.search_rounded,
-                                    color: textSecondary,
-                                    size: 20,
+                                  prefixIcon: Center(
+                                    widthFactor: 1.0,
+                                    child: AppIcon(
+                                      icon: HugeIcons.strokeRoundedSearch01,
+                                      color: textSecondary,
+                                      size: 20,
+                                    ),
                                   ),
                                   suffixIcon: _centerSearchQuery.isNotEmpty
                                       ? IconButton(
-                                          icon: const Icon(Icons.clear, size: 18),
+                                          icon: const AppIcon(
+                                            icon: HugeIcons.strokeRoundedCancel01,
+                                            size: 18,
+                                          ),
                                           onPressed: () {
                                             _searchController.clear();
                                             setState(() {
@@ -1136,8 +1151,8 @@ class _FinanceScreenState extends State<FinanceScreen> {
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
-                                  Icon(
-                                    Icons.tune_rounded,
+                                  AppIcon(
+                                    icon: HugeIcons.strokeRoundedSlidersHorizontal,
                                     color: _hasActiveFilter
                                         ? primaryColor
                                         : textSecondary,
@@ -1192,8 +1207,8 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.receipt_long_outlined,
+                          AppIcon(
+                            icon: HugeIcons.strokeRoundedInvoice01,
                             size: 44,
                             color: textSecondary.withValues(alpha: 0.5),
                           ),

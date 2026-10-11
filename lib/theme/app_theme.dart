@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   static bool isDark = false;
 
-  // App brand colors: Inspired by Accenture Design System (Electric Violet, Cyber Accents & Deep Obsidian)
-  static Color get primaryColor => isDark ? const Color(0xFFA100FF) : const Color(0xFFA100FF);
-  static Color get secondaryColor => isDark ? const Color(0xFF00E5FF) : const Color(0xFF7500C0);
+  // App brand colors: Google Blue (#1A73E8)
+  static Color get primaryColor => const Color(0xFF1A73E8);
+  static Color get secondaryColor => isDark ? const Color(0xFF8AB4F8) : const Color(0xFF1557B0);
   static Color get backgroundColor => isDark ? const Color(0xFF0D0D12) : const Color(0xFFF7F7FA);
   static Color get cardColor => isDark ? const Color(0xFF16161F) : const Color(0xFFFFFFFF);
   static Color get textColor => isDark ? const Color(0xFFF5F5FA) : const Color(0xFF0E0E14);
@@ -13,8 +14,8 @@ class AppTheme {
   static Color get borderLightColor => isDark ? const Color(0xFF262633) : const Color(0xFFE5E5ED);
 
   static ThemeData get lightTheme {
-    const primary = Color(0xFFA100FF); // Accenture Electric Violet
-    const secondary = Color(0xFF7500C0); // Deep Violet Accent
+    const primary = Color(0xFF1A73E8); // #1A73E8
+    const secondary = Color(0xFF1557B0); // Deep Blue Accent
     const background = Color(0xFFF7F7FA); // Architectural Studio Light Gray
     const card = Color(0xFFFFFFFF);
     const text = Color(0xFF0E0E14); // Ultra-crisp Onyx Text
@@ -23,12 +24,17 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
-      fontFamily: 'Graphik',
+      fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
       brightness: Brightness.light,
       primaryColor: primary,
       scaffoldBackgroundColor: background,
       cardColor: card,
       dividerColor: borderLight,
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFFE5E5ED),
+        thickness: 1,
+        space: 20,
+      ),
       
       colorScheme: const ColorScheme(
         brightness: Brightness.light,
@@ -151,14 +157,16 @@ class AppTheme {
         ),
       ),
 
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(color: text, fontSize: 32, fontWeight: FontWeight.bold),
-        displayMedium: TextStyle(color: text, fontSize: 26, fontWeight: FontWeight.bold),
-        titleLarge: TextStyle(color: text, fontSize: 20, fontWeight: FontWeight.bold),
-        titleMedium: TextStyle(color: text, fontSize: 17, fontWeight: FontWeight.w600),
-        bodyLarge: TextStyle(color: text, fontSize: 16, height: 1.5),
-        bodyMedium: TextStyle(color: text, fontSize: 14, height: 1.45),
-        bodySmall: TextStyle(color: textSecondary, fontSize: 12),
+      textTheme: GoogleFonts.plusJakartaSansTextTheme(
+        const TextTheme(
+          displayLarge: TextStyle(color: text, fontSize: 32, fontWeight: FontWeight.bold),
+          displayMedium: TextStyle(color: text, fontSize: 26, fontWeight: FontWeight.bold),
+          titleLarge: TextStyle(color: text, fontSize: 20, fontWeight: FontWeight.bold),
+          titleMedium: TextStyle(color: text, fontSize: 17, fontWeight: FontWeight.w600),
+          bodyLarge: TextStyle(color: text, fontSize: 16, height: 1.5),
+          bodyMedium: TextStyle(color: text, fontSize: 14, height: 1.45),
+          bodySmall: TextStyle(color: textSecondary, fontSize: 12),
+        ),
       ),
 
       inputDecorationTheme: InputDecorationTheme(
@@ -190,22 +198,27 @@ class AppTheme {
   }
 
   static ThemeData get darkTheme {
-    const darkPrimary = Color(0xFFA100FF); // Accenture Electric Violet
-    const darkSecondary = Color(0xFF00E5FF); // Cyber Cyan Accent
+    const darkPrimary = Color(0xFF1A73E8); // #1A73E8
+    const darkSecondary = Color(0xFF8AB4F8); // Lighter Blue Accent for dark mode
     const darkBackground = Color(0xFF0D0D12); // Deep Obsidian Dark Mode
     const darkCard = Color(0xFF16161F); // Dark Graphite Slate Card
     const darkText = Color(0xFFF5F5FA); // High Contrast Pristine Text
-    const darkTextSecondary = Color(0xFF9E9EAF); // Purple-Tinted Gray Text
+    const darkTextSecondary = Color(0xFF9E9EAF); // Slate Gray Text
     const darkBorder = Color(0xFF262633); // Subtle Precision Border
 
     return ThemeData(
       useMaterial3: true,
-      fontFamily: 'Graphik',
+      fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
       brightness: Brightness.dark,
       primaryColor: darkPrimary,
       scaffoldBackgroundColor: darkBackground,
       cardColor: darkCard,
       dividerColor: darkBorder,
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFF262633),
+        thickness: 1,
+        space: 20,
+      ),
       
       colorScheme: const ColorScheme(
         brightness: Brightness.dark,
@@ -327,14 +340,16 @@ class AppTheme {
         ),
       ),
 
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(color: darkText, fontSize: 32, fontWeight: FontWeight.bold),
-        displayMedium: TextStyle(color: darkText, fontSize: 26, fontWeight: FontWeight.bold),
-        titleLarge: TextStyle(color: darkText, fontSize: 20, fontWeight: FontWeight.bold),
-        titleMedium: TextStyle(color: darkText, fontSize: 17, fontWeight: FontWeight.w600),
-        bodyLarge: TextStyle(color: darkText, fontSize: 16, height: 1.5),
-        bodyMedium: TextStyle(color: darkText, fontSize: 14, height: 1.45),
-        bodySmall: TextStyle(color: darkTextSecondary, fontSize: 12),
+      textTheme: GoogleFonts.plusJakartaSansTextTheme(
+        const TextTheme(
+          displayLarge: TextStyle(color: darkText, fontSize: 32, fontWeight: FontWeight.bold),
+          displayMedium: TextStyle(color: darkText, fontSize: 26, fontWeight: FontWeight.bold),
+          titleLarge: TextStyle(color: darkText, fontSize: 20, fontWeight: FontWeight.bold),
+          titleMedium: TextStyle(color: darkText, fontSize: 17, fontWeight: FontWeight.w600),
+          bodyLarge: TextStyle(color: darkText, fontSize: 16, height: 1.5),
+          bodyMedium: TextStyle(color: darkText, fontSize: 14, height: 1.45),
+          bodySmall: TextStyle(color: darkTextSecondary, fontSize: 12),
+        ),
       ),
 
       inputDecorationTheme: InputDecorationTheme(

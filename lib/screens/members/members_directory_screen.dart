@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../models/center_model.dart';
 import '../../models/member.dart';
 import '../../services/database_service.dart';
@@ -22,10 +23,12 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
   MemberFilterCriteria _filterCriteria = const MemberFilterCriteria();
   List<CenterModel> _allCenters = [];
   Member? _currentMember;
+  late final Stream<List<Member>> _membersStream;
 
   @override
   void initState() {
     super.initState();
+    _membersStream = _firestoreService.getMembersStream();
     _loadCenters();
     _firestoreService.getCurrentMember().then((user) {
       if (mounted && user != null) {
@@ -99,7 +102,7 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
 
     return Scaffold(
       body: StreamBuilder<List<Member>>(
-        stream: _firestoreService.getMembersStream(),
+        stream: _membersStream,
         builder: (context, snapshot) {
           final allMembers = snapshot.data ?? [];
 
@@ -192,85 +195,11 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
 
           return CustomScrollView(
             slivers: [
-              // Header & Search + Filter Bar
+              // Search + Filter Bar
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(22),
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: borderColor, width: 1.2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
-                              blurRadius: 14,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'REGISTRY & RECORDS',
-                                  style: TextStyle(
-                                    color: primaryColor,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 1.6,
-                                  ),
-                                ),
-                                if (snapshot.hasData)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: primaryColor.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      '${filteredMembers.length} Members',
-                                      style: TextStyle(
-                                        color: primaryColor,
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Members Directory',
-                              style: TextStyle(
-                                color: textPrimary,
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Directory listings, local church center memberships, and profile registry.',
-                              style: TextStyle(
-                                color: textSecondary,
-                                fontSize: 14,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Search input and Filter Icon row
-                      Row(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                  child: Row(
                         children: [
                           Expanded(
                             child: TextField(
@@ -282,10 +211,19 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
                               },
                               decoration: InputDecoration(
                                 hintText: 'Search members...',
-                                prefixIcon: const Icon(Icons.search_rounded, size: 22),
+                                prefixIcon: const Center(
+                                  widthFactor: 1.0,
+                                  child: AppIcon(
+                                    icon: HugeIcons.strokeRoundedSearch01,
+                                    size: 20,
+                                  ),
+                                ),
                                 suffixIcon: _searchQuery.isNotEmpty
                                     ? IconButton(
-                                        icon: const Icon(Icons.clear_rounded, size: 20),
+                                        icon: const AppIcon(
+                                          icon: HugeIcons.strokeRoundedCancel01,
+                                          size: 18,
+                                        ),
                                         onPressed: () {
                                           _searchController.clear();
                                           setState(() {
@@ -334,9 +272,9 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
-                                  Icon(
-                                    Icons.tune_rounded,
-                                    size: 24,
+                                  AppIcon(
+                                    icon: HugeIcons.strokeRoundedSlidersHorizontal,
+                                    size: 22,
                                     color: _filterCriteria.hasActiveFilter ? primaryColor : textPrimary,
                                   ),
                                   if (_filterCriteria.hasActiveFilter)
@@ -368,8 +306,6 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
                           ),
                         ],
                       ),
-                    ],
-                  ),
                 ),
               ),
 
@@ -409,8 +345,8 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.people_outline_rounded,
+                          AppIcon(
+                            icon: HugeIcons.strokeRoundedUserGroup,
                             size: 56,
                             color: textSecondary.withValues(alpha: 0.5),
                           ),
@@ -443,7 +379,7 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
               // Members List
               else
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 84),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
@@ -505,41 +441,46 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             // Profile photo
-                            leading: Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isInactive
-                                    ? Colors.grey.withValues(alpha: 0.15)
-                                    : primaryColor.withValues(alpha: 0.12),
-                                border: Border.all(
-                                  color: isInactive
-                                      ? Colors.grey.withValues(alpha: 0.3)
-                                      : primaryColor.withValues(alpha: 0.3),
-                                  width: 1.5,
-                                ),
-                                image: member.profileImageProvider != null
-                                    ? DecorationImage(
-                                        image: member.profileImageProvider!,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : null,
-                              ),
-                              child: member.profileImageProvider == null
-                                  ? Center(
-                                      child: Text(
-                                        member.firstName.isNotEmpty
-                                            ? member.firstName[0].toUpperCase()
-                                            : 'M',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: isInactive ? textSecondary : primaryColor,
-                                        ),
-                                      ),
-                                    )
-                                  : null,
+                            leading: Builder(
+                              builder: (context) {
+                                final avatarProvider = member.profileImageProvider;
+                                return Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isInactive
+                                        ? Colors.grey.withValues(alpha: 0.15)
+                                        : primaryColor.withValues(alpha: 0.12),
+                                    border: Border.all(
+                                      color: isInactive
+                                          ? Colors.grey.withValues(alpha: 0.3)
+                                          : primaryColor.withValues(alpha: 0.3),
+                                      width: 1.5,
+                                    ),
+                                    image: avatarProvider != null
+                                        ? DecorationImage(
+                                            image: avatarProvider,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
+                                  ),
+                                  child: avatarProvider == null
+                                      ? Center(
+                                          child: Text(
+                                            member.firstName.isNotEmpty
+                                                ? member.firstName[0].toUpperCase()
+                                                : 'M',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: isInactive ? textSecondary : primaryColor,
+                                            ),
+                                          ),
+                                        )
+                                      : null,
+                                );
+                              },
                             ),
                             // Member Full Name
                             title: Text(
@@ -583,8 +524,8 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(
-                                            Icons.warning_amber_rounded,
+                                          AppIcon(
+                                            icon: HugeIcons.strokeRoundedAlert02,
                                             size: 12,
                                             color: Colors.amber.shade900,
                                           ),
@@ -619,8 +560,8 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(
-                                            Icons.copy_rounded,
+                                          AppIcon(
+                                            icon: HugeIcons.strokeRoundedCopy01,
                                             size: 12,
                                             color: Colors.amber.shade900,
                                           ),
@@ -676,10 +617,10 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
                                             : Colors.amber.withValues(alpha: isDark ? 0.2 : 0.14),
                                         shape: BoxShape.circle,
                                       ),
-                                      child: Icon(
-                                        isComplete
-                                            ? Icons.check_circle_rounded
-                                            : Icons.warning_amber_rounded,
+                                      child: AppIcon(
+                                        icon: isComplete
+                                            ? HugeIcons.strokeRoundedCheckmarkCircle01
+                                            : HugeIcons.strokeRoundedAlert02,
                                         size: 15,
                                         color: isComplete ? Colors.green : Colors.amber.shade800,
                                       ),

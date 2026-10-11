@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_icon.dart';
 
 enum LegalDocType { termsOfService, privacyPolicy, communityStandards, about }
 
@@ -86,7 +87,7 @@ class LegalAboutSheet extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, size: 22),
+                    icon: AppIcon(icon: HugeIcons.strokeRoundedCancel01, size: 20, color: textSecondary),
                     color: textSecondary,
                     onPressed: () => Navigator.of(context).pop(),
                   ),
@@ -257,8 +258,8 @@ class LegalAboutSheet extends StatelessWidget {
                       color: primaryColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Icon(
-                      Icons.church_rounded,
+                    child: AppIcon(
+                      icon: HugeIcons.strokeRoundedChurch,
                       color: primaryColor,
                       size: 30,
                     ),

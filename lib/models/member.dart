@@ -83,6 +83,8 @@ class Member {
   final bool signatureDeclined;
   final String createdAt;
   final String updatedAt;
+  final ImageProvider? cachedProfileProvider;
+  final ImageProvider? cachedSignatureProvider;
 
   const Member({
     required this.id,
@@ -117,6 +119,8 @@ class Member {
     this.signatureDeclined = false,
     this.createdAt = '',
     this.updatedAt = '',
+    this.cachedProfileProvider,
+    this.cachedSignatureProvider,
   });
 
   Member copyWith({
@@ -152,7 +156,12 @@ class Member {
     bool? signatureDeclined,
     String? createdAt,
     String? updatedAt,
+    ImageProvider? cachedProfileProvider,
+    ImageProvider? cachedSignatureProvider,
   }) {
+    final newProfileUrl = profileUrl ?? this.profileUrl;
+    final newSignatureUrl = signatureUrl ?? this.signatureUrl;
+
     return Member(
       id: id ?? this.id,
       memberId: memberId ?? this.memberId,
@@ -181,11 +190,15 @@ class Member {
       inactiveReason: inactiveReason ?? this.inactiveReason,
       memberType: memberType ?? this.memberType,
       dateJoined: dateJoined ?? this.dateJoined,
-      profileUrl: profileUrl ?? this.profileUrl,
-      signatureUrl: signatureUrl ?? this.signatureUrl,
+      profileUrl: newProfileUrl,
+      signatureUrl: newSignatureUrl,
       signatureDeclined: signatureDeclined ?? this.signatureDeclined,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      cachedProfileProvider: cachedProfileProvider ??
+          (profileUrl != null ? _buildImageProvider(newProfileUrl) : this.cachedProfileProvider),
+      cachedSignatureProvider: cachedSignatureProvider ??
+          (signatureUrl != null ? _buildImageProvider(newSignatureUrl) : this.cachedSignatureProvider),
     );
   }
 
@@ -275,7 +288,10 @@ class Member {
       role.toLowerCase() == 'district admin';
   bool get isDistrictAdmin => isAdmin || isDistrictLeader;
   bool get isAreaLeader => role.toLowerCase() == 'area';
-  bool get isLocalLeader => role.toLowerCase() == 'local';
+  bool get isLocalLeader =>
+      role.toLowerCase() == 'local' ||
+      role.toLowerCase() == 'local_admin' ||
+      role.toLowerCase() == 'local admin';
   bool get isRegularMember => role.toLowerCase() == 'member' || role.isEmpty;
 
   bool get canCreateDistrictPosts => isAdmin || isDistrictLeader;
@@ -284,6 +300,7 @@ class Member {
   bool get canAddMembers => !isRegularMember;
   bool get canAssignRoles => isAdmin;
   bool get canAccessAdminTools => isAdmin || isDistrictLeader;
+  bool get canDeleteMembers => isAdmin || isDistrictLeader || isAreaLeader;
 
   // Scope locking helpers
   bool get isDistrictLocked => isDistrictLeader || isAreaLeader || isLocalLeader;
@@ -412,10 +429,10 @@ class Member {
         .toLowerCase();
     if (status == 'inactive') return true;
 
+    // Note: middleName is optional as some members do not have a middle name.
     const requiredFields = [
       'firstName',
       'lastName',
-      'middleName',
       'dob',
       'gender',
       'civilStatus',
@@ -435,9 +452,12 @@ class Member {
       if (val == null || val.isEmpty || val == 'N/A') {
         return false;
       }
-      if (field == 'middleName' && isMiddleInitialOnly(val)) {
-        return false;
-      }
+    }
+
+    // If middle name is provided, ensure it is not just an initial
+    final middleVal = member['middleName']?.toString().trim() ?? '';
+    if (middleVal.isNotEmpty && middleVal != 'N/A' && isMiddleInitialOnly(middleVal)) {
+      return false;
     }
 
     final signatureDeclined = member['signatureDeclined'] as bool? ?? false;
@@ -461,9 +481,8 @@ class Member {
 
     if (firstName.trim().isEmpty || firstName.trim() == 'N/A') missing.add('First Name');
     if (lastName.trim().isEmpty || lastName.trim() == 'N/A') missing.add('Last Name');
-    if (middleName.trim().isEmpty || middleName.trim() == 'N/A') {
-      missing.add('Middle Name');
-    } else if (hasMiddleInitialOnly) {
+    // Middle name is optional (accepted if blank). If provided, ensure it's not just an initial.
+    if (middleName.trim().isNotEmpty && middleName.trim() != 'N/A' && hasMiddleInitialOnly) {
       missing.add('Full Middle Name (Initial Only)');
     }
     if (dob.trim().isEmpty || dob.trim() == 'N/A') missing.add('Date of Birth');
@@ -487,29 +506,45 @@ class Member {
   /// Computed boolean check for completeness of this Member instance
   bool get isProfileComplete => missingFields.isEmpty;
 
+  static final Map<String, ImageProvider> _imageCache = {};
+
   /// Image provider for profile photo supporting Network URLs and Base64 Data URLs
   ImageProvider? get profileImageProvider {
-    final url = profileUrl.trim();
-    if (url.isEmpty || url == 'N/A') return null;
-    if (url.startsWith('data:image') || !url.startsWith('http')) {
-      try {
-        final raw = url.contains(',') ? url.split(',').last : url;
-        return MemoryImage(base64Decode(raw));
-      } catch (_) {
-        return null;
-      }
-    }
-    return CachedNetworkImageProvider(url);
+    if (cachedProfileProvider != null) return cachedProfileProvider;
+    return _getCachedImage(profileUrl);
   }
 
   /// Image provider for digital signature supporting Network URLs and Base64 Data URLs
   ImageProvider? get signatureImageProvider {
-    final url = signatureUrl.trim();
+    if (cachedSignatureProvider != null) return cachedSignatureProvider;
+    return _getCachedImage(signatureUrl);
+  }
+
+  static ImageProvider? _getCachedImage(String rawUrl) {
+    final url = rawUrl.trim();
+    if (url.isEmpty || url == 'N/A') return null;
+    if (_imageCache.containsKey(url)) {
+      return _imageCache[url];
+    }
+    final provider = _buildImageProvider(url);
+    if (provider != null) {
+      if (_imageCache.length >= 60) {
+        _imageCache.remove(_imageCache.keys.first);
+      }
+      _imageCache[url] = provider;
+    }
+    return provider;
+  }
+
+  /// Helper to build an ImageProvider safely with Base64 decoded only once
+  static ImageProvider? _buildImageProvider(String rawUrl) {
+    final url = rawUrl.trim();
     if (url.isEmpty || url == 'N/A') return null;
     if (url.startsWith('data:image') || !url.startsWith('http')) {
       try {
         final raw = url.contains(',') ? url.split(',').last : url;
-        return MemoryImage(base64Decode(raw));
+        final bytes = base64Decode(raw);
+        return MemoryImage(bytes);
       } catch (_) {
         return null;
       }

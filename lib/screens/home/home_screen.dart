@@ -1,13 +1,30 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../models/member.dart';
 import '../../models/post.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/formatted_post_text.dart';
 import '../posts/create_post_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
+  late final Stream<Member?> _currentMemberStream;
+  late final Stream<List<Post>> _postsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentMemberStream = _firestoreService.getCurrentMemberStream();
+    _postsStream = _firestoreService.getPostsStream();
+  }
 
   void _confirmDeletePost(BuildContext context, Post post) {
     showDialog(
@@ -91,7 +108,11 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 ListTile(
-                  leading: Icon(Icons.edit_outlined, color: textPrimary),
+                  leading: AppIcon(
+                    icon: HugeIcons.strokeRoundedEdit02,
+                    color: textPrimary,
+                    size: 20,
+                  ),
                   title: Text(
                     'Edit Post',
                     style: TextStyle(
@@ -110,9 +131,10 @@ class HomeScreen extends StatelessWidget {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(
-                    Icons.delete_outline_rounded,
+                  leading: const AppIcon(
+                    icon: HugeIcons.strokeRoundedDelete02,
                     color: Color(0xFFFF2A55),
+                    size: 20,
                   ),
                   title: const Text(
                     'Delete Post',
@@ -143,7 +165,6 @@ class HomeScreen extends StatelessWidget {
     final textSecondary = isDark ? const Color(0xFF9E9EAF) : const Color(0xFF6E6E82);
     final cardBg = isDark ? const Color(0xFF16161F) : Colors.white;
     final borderColor = isDark ? const Color(0xFF262633) : const Color(0xFFE5E5ED);
-    final firestoreService = FirestoreService();
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -205,73 +226,31 @@ class HomeScreen extends StatelessWidget {
 
             // Section Header & Live Posts Feed
             StreamBuilder<Member?>(
-              stream: firestoreService.getCurrentMemberStream(),
+              stream: _currentMemberStream,
               builder: (context, memberSnapshot) {
                 final currentMember = memberSnapshot.data;
                 final currentUser = FirebaseAuth.instance.currentUser;
                 final userRole = currentMember?.role.toLowerCase() ?? 'admin';
                 final isAdmin = userRole == 'admin';
-                final canCreate = currentMember != null && currentMember.canCreateDistrictPosts;
-
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Section Header: Announcements & District Posts
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'DISTRICT POSTS & ADVISORIES',
-                          style: TextStyle(
-                            color: primaryColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.4,
-                          ),
-                        ),
-                        if (canCreate)
-                          Material(
-                            color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                            child: InkWell(
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const CreatePostScreen(),
-                                  ),
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.add_circle_outline_rounded,
-                                        size: 16, color: primaryColor),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Create Post',
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: primaryColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
+                    Text(
+                      'DISTRICT POSTS & ADVISORIES',
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.4,
+                      ),
                     ),
 
                     const SizedBox(height: 12),
 
                     // Live Posts Feed
                     StreamBuilder<List<Post>>(
-                      stream: firestoreService.getPostsStream(),
+                      stream: _postsStream,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                                 ConnectionState.waiting &&
@@ -296,8 +275,8 @@ class HomeScreen extends StatelessWidget {
                             ),
                             child: Column(
                               children: [
-                                Icon(
-                                  Icons.campaign_outlined,
+                                AppIcon(
+                                  icon: HugeIcons.strokeRoundedMegaphone01,
                                   size: 48,
                                   color: textSecondary.withValues(alpha: 0.4),
                                 ),
@@ -409,9 +388,10 @@ class HomeScreen extends StatelessWidget {
                                         ),
                                         if (canManage)
                                           IconButton(
-                                            icon: const Icon(
-                                              Icons.more_horiz_rounded,
+                                            icon: AppIcon(
+                                              icon: HugeIcons.strokeRoundedMoreHorizontal,
                                               size: 20,
+                                              color: textSecondary,
                                             ),
                                             color: textSecondary,
                                             tooltip: 'Post options',

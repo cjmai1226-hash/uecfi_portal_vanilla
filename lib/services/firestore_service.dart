@@ -7,6 +7,7 @@ import '../models/member.dart';
 import '../models/post.dart';
 import '../models/transfer_request.dart';
 import '../utils/image_utils.dart';
+import 'storage_service.dart';
 
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();
@@ -185,14 +186,35 @@ class FirestoreService {
   }
 
   Future<Map<String, dynamic>> _sanitizeMemberPayload(
-      Map<String, dynamic> payload) async {
+      Map<String, dynamic> payload, {String? memberId}) async {
     final clean = Map<String, dynamic>.from(payload);
+    final idForStorage = (memberId ?? clean['memberId']?.toString() ?? 'temp').trim();
+
     for (final key in ['profileUrl', 'signatureUrl']) {
       if (clean[key] is String) {
         final str = (clean[key] as String).trim();
-        if (str.startsWith('data:image') &&
-            ImageUtils.estimateBase64SizeBytes(str) >
-                ImageUtils.maxPhotoBytes) {
+        final isBase64 = str.startsWith('data:image') ||
+            (!str.startsWith('http') && str.length > 100);
+
+        if (isBase64) {
+          final folder = key == 'profileUrl' ? 'profile' : 'signature';
+
+          // 1. First, attempt upload to Firebase Storage
+          try {
+            final storageUrl = await StorageService().uploadBase64IfApplicable(
+              memberId: idForStorage,
+              base64OrUrl: str,
+              folder: folder,
+            );
+            if (storageUrl != null && storageUrl.isNotEmpty && storageUrl.startsWith('http')) {
+              clean[key] = storageUrl;
+              continue; // Saved to Firebase Storage successfully!
+            }
+          } catch (storageErr) {
+            debugPrint('Storage upload fallback for $key: $storageErr');
+          }
+
+          // 2. Safe fallback: compress Base64 if Storage upload was unsuccessful
           try {
             final raw = str.contains(',') ? str.split(',').last : str;
             final decoded = base64Decode(raw);
@@ -204,8 +226,7 @@ class FirestoreService {
               mimeType: key == 'profileUrl' ? 'image/jpeg' : 'image/png',
             );
           } catch (err) {
-            debugPrint(
-                'Error auto-compressing $key in firestore payload: $err');
+            debugPrint('Error auto-compressing $key in firestore payload: $err');
           }
         }
       }
@@ -216,7 +237,7 @@ class FirestoreService {
   /// Add a new Member document to Firestore and automatically log the activity
   Future<String> addMember(Member member, {String? customActorName}) async {
     try {
-      final payload = await _sanitizeMemberPayload(member.toMap());
+      final payload = await _sanitizeMemberPayload(member.toMap(), memberId: member.memberId);
       final docRef = await _firestore.collection('members').add(payload);
 
       // Record activity log with exact requested schema
@@ -269,7 +290,7 @@ class FirestoreService {
         updatePayload = member.toMap();
       }
 
-      final cleanPayload = await _sanitizeMemberPayload(updatePayload);
+      final cleanPayload = await _sanitizeMemberPayload(updatePayload, memberId: member.memberId);
 
       if (member.id.isNotEmpty) {
         await _firestore
@@ -408,12 +429,14 @@ class FirestoreService {
   }
 
   /// Stream of District Posts ordered by pinned status and creation date
-  Stream<List<Post>> getPostsStream({String? category}) {
+  Stream<List<Post>> getPostsStream({String? category, int limit = 40}) {
     Query query = _firestore.collection('posts');
 
     if (category != null && category.isNotEmpty && category != 'All') {
       query = query.where('category', isEqualTo: category);
     }
+
+    query = query.limit(limit);
 
     return query.snapshots().map((snapshot) {
       final posts = snapshot.docs.map((doc) => Post.fromFirestore(doc)).toList();

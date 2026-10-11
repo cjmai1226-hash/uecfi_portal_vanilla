@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../models/member.dart';
 import '../../models/transfer_request.dart';
 import '../../services/firestore_service.dart';
@@ -109,8 +110,8 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
             child: const Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.broken_image_rounded,
+                AppIcon(
+                  icon: HugeIcons.strokeRoundedImage01,
                   size: 40,
                   color: Colors.redAccent,
                 ),
@@ -127,8 +128,8 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
           child: const Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.broken_image_rounded,
+              AppIcon(
+                icon: HugeIcons.strokeRoundedImage01,
                 size: 40,
                 color: Colors.redAccent,
               ),
@@ -155,8 +156,8 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
         child: const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.broken_image_rounded,
+            AppIcon(
+              icon: HugeIcons.strokeRoundedImage01,
               size: 40,
               color: Colors.redAccent,
             ),
@@ -208,10 +209,10 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                         color: primaryColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(
-                        isSignature
-                            ? Icons.draw_rounded
-                            : Icons.account_circle_rounded,
+                      child: AppIcon(
+                        icon: isSignature
+                            ? HugeIcons.strokeRoundedEdit02
+                            : HugeIcons.strokeRoundedUser,
                         color: primaryColor,
                         size: 18,
                       ),
@@ -239,7 +240,10 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded),
+                      icon: const AppIcon(
+                        icon: HugeIcons.strokeRoundedCancel01,
+                        size: 20,
+                      ),
                       onPressed: () => Navigator.of(context).pop(),
                       tooltip: 'Close',
                     ),
@@ -347,6 +351,7 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
     final member = _currentMember;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final dividerColor = isDark ? const Color(0xFF2C2C36) : const Color(0xFFE5E5EA);
     final isInactive = member.isInactive;
 
     final duplicates = _allMembers.where((other) {
@@ -361,7 +366,10 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
         elevation: 0,
         scrolledUnderElevation: 1,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const AppIcon(
+            icon: HugeIcons.strokeRoundedArrowLeft01,
+            size: 24,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
@@ -380,21 +388,33 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                   loggedInMember.area.isNotEmpty &&
                   loggedInMember.area.toLowerCase() == member.area.toLowerCase();
 
-              final isCenterMatch = isAreaMatch &&
-                  loggedInMember.center.isNotEmpty &&
-                  loggedInMember.center.toLowerCase() == member.center.toLowerCase();
+              final isDistrictLeader = userRole == 'district' ||
+                  userRole == 'district_admin' ||
+                  userRole == 'district admin';
 
-              final canDelete = isAdmin ||
-                  (userRole == 'district' && isDistrictMatch) ||
-                  (userRole == 'area' && isAreaMatch) ||
-                  (userRole == 'local' && isCenterMatch);
+              final isAreaLeader = userRole == 'area';
+
+              // Local admin / officer must NOT have the action to delete a member
+              final isLocalLeader = userRole == 'local' ||
+                  userRole == 'local_admin' ||
+                  userRole == 'local admin';
+
+              final canDelete = !isLocalLeader &&
+                  userRole != 'member' &&
+                  (isAdmin ||
+                      (isDistrictLeader && isDistrictMatch) ||
+                      (isAreaLeader && isAreaMatch));
 
               if (!canDelete) {
                 return const SizedBox(width: 8);
               }
 
               return IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, size: 20, color: Color(0xFFFF2A55)),
+                icon: const AppIcon(
+                  icon: HugeIcons.strokeRoundedDelete02,
+                  size: 20,
+                  color: Color(0xFFFF2A55),
+                ),
                 tooltip: 'Delete Record',
                 onPressed: () => _confirmDeleteMember(context),
               );
@@ -482,8 +502,8 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                                       width: 2,
                                     ),
                                   ),
-                                  child: const Icon(
-                                    Icons.fullscreen_rounded,
+                                  child: const AppIcon(
+                                    icon: HugeIcons.strokeRoundedMaximize01,
                                     size: 13,
                                     color: Colors.white,
                                   ),
@@ -609,8 +629,8 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.info_outline_rounded,
+                            const AppIcon(
+                              icon: HugeIcons.strokeRoundedInformationCircle,
                               size: 14,
                               color: Colors.amber,
                             ),
@@ -678,7 +698,11 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                                       ),
                                     ),
                                     onPressed: _handleEditMember,
-                                    icon: const Icon(Icons.edit_rounded, size: 20),
+                                    icon: const AppIcon(
+                                      icon: HugeIcons.strokeRoundedEdit02,
+                                      size: 20,
+                                      color: Colors.white,
+                                    ),
                                     label: const Text(
                                       'Edit Member Profile',
                                       style: TextStyle(
@@ -740,10 +764,13 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                                         _refreshMember();
                                       }
                                     },
-                                    child: Icon(
-                                      hasPending
-                                          ? Icons.hourglass_top_rounded
-                                          : Icons.swap_horiz_rounded,
+                                    child: AppIcon(
+                                      icon: hasPending
+                                          ? HugeIcons.strokeRoundedHourglass
+                                          : HugeIcons.strokeRoundedArrowLeftRight,
+                                      color: hasPending
+                                          ? const Color(0xFFFF9100)
+                                          : const Color(0xFFE65100),
                                       size: 24,
                                     ),
                                   ),
@@ -766,8 +793,8 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                             ),
                             child: Row(
                               children: [
-                                const Icon(
-                                  Icons.pending_actions_rounded,
+                                const AppIcon(
+                                  icon: HugeIcons.strokeRoundedTime02,
                                   color: Color(0xFFFF9100),
                                   size: 22,
                                 ),
@@ -828,8 +855,8 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.warning_amber_rounded,
+                        AppIcon(
+                          icon: HugeIcons.strokeRoundedAlert02,
                           color: Colors.amber.shade900,
                           size: 22,
                         ),
@@ -875,8 +902,8 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                                 color: Colors.amber.withValues(alpha: isDark ? 0.25 : 0.15),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(
-                                Icons.location_on_rounded,
+                              child: AppIcon(
+                                icon: HugeIcons.strokeRoundedLocation01,
                                 size: 16,
                                 color: Colors.amber.shade900,
                               ),
@@ -958,10 +985,10 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      member.inactiveReason.trim().isEmpty
-                          ? Icons.warning_amber_rounded
-                          : Icons.info_outline_rounded,
+                    AppIcon(
+                      icon: member.inactiveReason.trim().isEmpty
+                          ? HugeIcons.strokeRoundedAlert02
+                          : HugeIcons.strokeRoundedInformationCircle,
                       color: member.inactiveReason.trim().isEmpty
                           ? Colors.amber.shade800
                           : (isDark ? Colors.white70 : Colors.black87),
@@ -1020,8 +1047,8 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.warning_amber_rounded,
+                        AppIcon(
+                          icon: HugeIcons.strokeRoundedAlert02,
                           color: Colors.amber.shade800,
                           size: 20,
                         ),
@@ -1067,8 +1094,8 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.close_rounded,
+                              AppIcon(
+                                icon: HugeIcons.strokeRoundedCancel01,
                                 size: 12,
                                 color: Colors.amber.shade800,
                               ),
@@ -1104,8 +1131,8 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.check_circle_rounded,
+                    const AppIcon(
+                      icon: HugeIcons.strokeRoundedCheckmarkCircle01,
                       color: Colors.green,
                       size: 20,
                     ),
@@ -1134,7 +1161,7 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                   children: [
                     _buildProfileRow(
                       context,
-                      icon: Icons.groups_outlined,
+                      icon: HugeIcons.strokeRoundedUserGroup,
                       label: 'Ministry Category',
                       value: member.dynamicCategory,
                     ),
@@ -1142,10 +1169,10 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                       ...member.positions.map((pos) {
                         return Column(
                           children: [
-                            const Divider(height: 20),
+                            _buildDivider(dividerColor),
                             _buildProfileRow(
                               context,
-                              icon: Icons.groups_outlined,
+                              icon: HugeIcons.strokeRoundedUserGroup,
                               label: pos.level.isNotEmpty
                                   ? '${pos.level} Ministry'
                                   : 'Ministry Position',
@@ -1155,10 +1182,10 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                         );
                       }),
                     ] else ...[
-                      const Divider(height: 20),
+                      _buildDivider(dividerColor),
                       _buildProfileRow(
                         context,
-                        icon: Icons.groups_outlined,
+                        icon: HugeIcons.strokeRoundedUserGroup,
                         label: 'Assigned Position',
                         value: member.primaryRole,
                       ),
@@ -1180,31 +1207,31 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                   children: [
                     _buildProfileRow(
                       context,
-                      icon: Icons.church_outlined,
+                      icon: HugeIcons.strokeRoundedChurch,
                       label: 'Local Center / Branch',
                       value: member.center.isNotEmpty
                           ? member.center
                           : 'Antipolo Center',
                     ),
-                    const Divider(height: 20),
+                    _buildDivider(dividerColor),
                     _buildProfileRow(
                       context,
-                      icon: Icons.map_outlined,
+                      icon: HugeIcons.strokeRoundedMap,
                       label: 'District & Area',
                       value: '${member.district} • ${member.area}',
                     ),
-                    const Divider(height: 20),
+                    _buildDivider(dividerColor),
                     _buildProfileRow(
                       context,
-                      icon: Icons.calendar_today_outlined,
+                      icon: HugeIcons.strokeRoundedCalendar03,
                       label: 'Date Joined',
                       value: member.formattedDateJoined,
                     ),
                     if (isInactive) ...[
-                      const Divider(height: 20),
+                      _buildDivider(dividerColor),
                       _buildProfileRow(
                         context,
-                        icon: Icons.info_outline_rounded,
+                        icon: HugeIcons.strokeRoundedInformationCircle,
                         label: 'Reason for Inactivity',
                         value: member.inactiveReason.isNotEmpty
                             ? member.inactiveReason
@@ -1228,21 +1255,21 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                   children: [
                     _buildProfileRow(
                       context,
-                      icon: Icons.cake_outlined,
+                      icon: HugeIcons.strokeRoundedBirthdayCake,
                       label: 'Date of Birth (Age)',
                       value: member.formattedDobWithAge,
                     ),
-                    const Divider(height: 20),
+                    _buildDivider(dividerColor),
                     _buildProfileRow(
                       context,
-                      icon: Icons.wc_outlined,
+                      icon: HugeIcons.strokeRoundedUser,
                       label: 'Gender',
                       value: member.gender,
                     ),
-                    const Divider(height: 20),
+                    _buildDivider(dividerColor),
                     _buildProfileRow(
                       context,
-                      icon: Icons.favorite_border_rounded,
+                      icon: HugeIcons.strokeRoundedFavourite,
                       label: 'Civil Status',
                       value: member.civilStatus,
                     ),
@@ -1263,16 +1290,16 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                   children: [
                     _buildProfileRow(
                       context,
-                      icon: Icons.phone_outlined,
+                      icon: HugeIcons.strokeRoundedCall,
                       label: 'Contact Number',
                       value: member.contactNo.isNotEmpty
                           ? member.contactNo
                           : 'Not provided',
                     ),
-                    const Divider(height: 20),
+                    _buildDivider(dividerColor),
                     _buildProfileRow(
                       context,
-                      icon: Icons.email_outlined,
+                      icon: HugeIcons.strokeRoundedMail01,
                       label: 'Email Address',
                       value: member.email.isNotEmpty
                           ? member.email
@@ -1295,43 +1322,43 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                   children: [
                     _buildProfileRow(
                       context,
-                      icon: Icons.signpost_outlined,
+                      icon: HugeIcons.strokeRoundedPinLocation01,
                       label: 'Street / Zone',
                       value: member.street.isNotEmpty
                           ? member.street
                           : 'Not provided',
                     ),
-                    const Divider(height: 20),
+                    _buildDivider(dividerColor),
                     _buildProfileRow(
                       context,
-                      icon: Icons.location_city_outlined,
+                      icon: HugeIcons.strokeRoundedBuilding02,
                       label: 'Barangay',
                       value: member.barangay.isNotEmpty
                           ? member.barangay
                           : 'Not provided',
                     ),
-                    const Divider(height: 20),
+                    _buildDivider(dividerColor),
                     _buildProfileRow(
                       context,
-                      icon: Icons.apartment_outlined,
+                      icon: HugeIcons.strokeRoundedBuilding03,
                       label: 'Municipality / City',
                       value: member.municipality.isNotEmpty
                           ? member.municipality
                           : 'Antipolo',
                     ),
-                    const Divider(height: 20),
+                    _buildDivider(dividerColor),
                     _buildProfileRow(
                       context,
-                      icon: Icons.terrain_outlined,
+                      icon: HugeIcons.strokeRoundedGlobe,
                       label: 'Province',
                       value: member.province.isNotEmpty
                           ? member.province
                           : 'Rizal',
                     ),
-                    const Divider(height: 20),
+                    _buildDivider(dividerColor),
                     _buildProfileRow(
                       context,
-                      icon: Icons.public_outlined,
+                      icon: HugeIcons.strokeRoundedFlag01,
                       label: 'Region',
                       value: member.region.isNotEmpty
                           ? member.region
@@ -1442,8 +1469,8 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                                   child: const Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(
-                                        Icons.zoom_in_rounded,
+                                      AppIcon(
+                                        icon: HugeIcons.strokeRoundedMaximize01,
                                         size: 12,
                                         color: Colors.white,
                                       ),
@@ -1486,6 +1513,14 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
     );
   }
 
+  Widget _buildDivider(Color dividerColor) {
+    return Divider(
+      height: 20,
+      thickness: 1,
+      color: dividerColor,
+    );
+  }
+
   Widget _buildSectionHeader(String title, Color primaryColor) {
     return Text(
       title,
@@ -1500,7 +1535,7 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
 
   Widget _buildProfileRow(
     BuildContext context, {
-    required IconData icon,
+    required dynamic icon,
     required String label,
     required String value,
     Color? valueColor,
@@ -1513,7 +1548,7 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: primaryColor),
+        AppIcon(icon: icon, size: 18, color: primaryColor),
         const SizedBox(width: 12),
         Expanded(
           child: Column(

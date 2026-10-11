@@ -59,10 +59,12 @@ class _CenterDetailsScreenState extends State<CenterDetailsScreen> {
   }
 
   List<CenterModel> _allCenters = [];
+  late final Stream<List<Member>> _membersStream;
 
   @override
   void initState() {
     super.initState();
+    _membersStream = _firestoreService.getMembersStream();
     if (widget.allCenters != null && widget.allCenters!.isNotEmpty) {
       _allCenters = widget.allCenters!;
     } else {
@@ -584,7 +586,7 @@ class _CenterDetailsScreenState extends State<CenterDetailsScreen> {
         ),
       ),
       body: StreamBuilder<List<Member>>(
-        stream: _firestoreService.getMembersStream(),
+        stream: _membersStream,
         builder: (context, snapshot) {
           final allMembers = snapshot.data ?? [];
           final allCenters = _allCenters.isNotEmpty

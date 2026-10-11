@@ -1166,17 +1166,15 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                       const SizedBox(height: 12),
 
                       _buildTextField(
-                        label: _isInactive
-                            ? 'Middle Name (Optional)'
-                            : 'Middle Name (Full Name Required)',
+                        label: 'Middle Name (Optional)',
                         controller: _middleNameController,
-                        hintText: 'e.g. Santos (full name, not initial like A.)',
+                        hintText: 'e.g. Santos (leave blank if none)',
                         validator: (val) {
                           if (_isInactive) return null;
                           if (val != null &&
                               val.trim().isNotEmpty &&
                               Member.isMiddleInitialOnly(val)) {
-                            return 'Enter full middle name, not just initial "${val.trim()}"';
+                            return 'Enter full middle name, or leave blank if none';
                           }
                           return null;
                         },

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import 'package:intl/intl.dart';
 import '../../models/center_model.dart';
 import '../../models/member.dart';
@@ -25,12 +26,14 @@ class _StatsScreenState extends State<StatsScreen> {
   List<CenterModel> _databaseCenters = [];
   bool _isLoadingCenters = true;
   Member? _currentMember;
+  late final Stream<List<Member>> _membersStream;
 
   StatsFilterCriteria _filterCriteria = const StatsFilterCriteria();
 
   @override
   void initState() {
     super.initState();
+    _membersStream = _firestoreService.getMembersStream();
     _loadCenters();
     _firestoreService.getCurrentMember().then((user) {
       if (mounted && user != null) {
@@ -187,7 +190,7 @@ class _StatsScreenState extends State<StatsScreen> {
 
     return Scaffold(
       body: StreamBuilder<List<Member>>(
-        stream: _firestoreService.getMembersStream(),
+        stream: _membersStream,
         builder: (context, snapshot) {
           final allMembers = snapshot.data ?? [];
 
@@ -528,14 +531,17 @@ class _StatsScreenState extends State<StatsScreen> {
                               },
                               decoration: InputDecoration(
                                 hintText: 'Search center name or address...',
-                                prefixIcon: const Icon(
-                                  Icons.search_rounded,
-                                  size: 20,
+                                prefixIcon: const Center(
+                                  widthFactor: 1.0,
+                                  child: AppIcon(
+                                    icon: HugeIcons.strokeRoundedSearch01,
+                                    size: 20,
+                                  ),
                                 ),
                                 suffixIcon: _centerSearchQuery.isNotEmpty
                                     ? IconButton(
-                                        icon: const Icon(
-                                          Icons.clear_rounded,
+                                        icon: const AppIcon(
+                                          icon: HugeIcons.strokeRoundedCancel01,
                                           size: 18,
                                         ),
                                         onPressed: () {
@@ -596,8 +602,8 @@ class _StatsScreenState extends State<StatsScreen> {
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
-                                  Icon(
-                                    Icons.tune_rounded,
+                                  AppIcon(
+                                    icon: HugeIcons.strokeRoundedSlidersHorizontal,
                                     size: 22,
                                     color: _filterCriteria.hasActiveFilter
                                         ? primaryColor
@@ -660,8 +666,8 @@ class _StatsScreenState extends State<StatsScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.church_outlined,
+                          AppIcon(
+                            icon: HugeIcons.strokeRoundedChurch,
                             size: 52,
                             color: textSecondary.withValues(alpha: 0.5),
                           ),

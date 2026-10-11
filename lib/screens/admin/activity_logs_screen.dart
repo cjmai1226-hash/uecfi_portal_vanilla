@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../widgets/app_icon.dart';
 import 'package:intl/intl.dart';
 import '../../models/activity_log.dart';
 import '../../models/member.dart';
@@ -17,6 +18,16 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   String _selectedActionFilter = 'All'; // 'All', 'ADD', 'UPDATE', 'DELETE'
+
+  late final Stream<Member?> _currentMemberStream;
+  late final Stream<List<ActivityLog>> _activityLogsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentMemberStream = _firestoreService.getCurrentMemberStream();
+    _activityLogsStream = _firestoreService.getActivityLogsStream();
+  }
 
   @override
   void dispose() {
@@ -96,7 +107,7 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, size: 22),
+                    icon: AppIcon(icon: HugeIcons.strokeRoundedCancel01, size: 20, color: textSecondary),
                     color: textSecondary,
                     onPressed: () => Navigator.of(ctx).pop(),
                   ),
@@ -172,7 +183,7 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.copy_rounded, size: 16),
+                  icon: AppIcon(icon: HugeIcons.strokeRoundedCopy01, size: 16, color: textPrimary),
                   label: const Text('Copy Audit Information'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: textPrimary,
@@ -257,13 +268,13 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
         elevation: 0,
         scrolledUnderElevation: 1,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: AppIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: textPrimary, size: 24),
           color: textPrimary,
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: StreamBuilder<Member?>(
-        stream: _firestoreService.getCurrentMemberStream(),
+        stream: _currentMemberStream,
         builder: (context, memberSnapshot) {
           if (memberSnapshot.connectionState == ConnectionState.waiting && !memberSnapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -285,8 +296,8 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
                         color: const Color(0xFFFF2A55).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.lock_person_rounded,
+                      child: const AppIcon(
+                        icon: HugeIcons.strokeRoundedUserShield01,
                         size: 48,
                         color: Color(0xFFFF2A55),
                       ),
@@ -322,7 +333,7 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
           }
 
           return StreamBuilder<List<ActivityLog>>(
-            stream: _firestoreService.getActivityLogsStream(),
+            stream: _activityLogsStream,
             builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -495,10 +506,13 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
                     decoration: InputDecoration(
                       hintText: 'Search description, admin, center, district...',
                       hintStyle: TextStyle(fontSize: 13, color: textSecondary),
-                      prefixIcon: Icon(Icons.search_rounded, color: textSecondary, size: 20),
+                      prefixIcon: Center(
+                        widthFactor: 1.0,
+                        child: AppIcon(icon: HugeIcons.strokeRoundedSearch01, color: textSecondary, size: 20),
+                      ),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.clear_rounded, size: 18),
+                              icon: AppIcon(icon: HugeIcons.strokeRoundedCancel01, size: 18, color: textSecondary),
                               color: textSecondary,
                               onPressed: () {
                                 _searchController.clear();
@@ -556,8 +570,8 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.history_rounded,
+                        AppIcon(
+                          icon: HugeIcons.strokeRoundedAudit01,
                           size: 52,
                           color: textSecondary.withValues(alpha: 0.4),
                         ),

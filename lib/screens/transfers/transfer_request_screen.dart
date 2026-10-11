@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../models/center_model.dart';
 import '../../models/member.dart';
 import '../../models/transfer_request.dart';
@@ -185,7 +186,7 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const AppIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle01, color: Colors.white, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -247,7 +248,7 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
         elevation: 0,
         scrolledUnderElevation: 1,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: AppIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: textPrimary, size: 24),
           color: textPrimary,
           onPressed: () => Navigator.of(context).pop(),
         ),
@@ -345,7 +346,7 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
                                 color: Colors.grey.withValues(alpha: 0.15),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.church_outlined, size: 18, color: Colors.grey),
+                              child: const AppIcon(icon: HugeIcons.strokeRoundedChurch, size: 18, color: Colors.grey),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -374,7 +375,7 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
                                     const SizedBox(height: 2),
                                     Row(
                                       children: [
-                                        Icon(Icons.location_on_outlined, size: 12, color: textSecondary),
+                                        AppIcon(icon: HugeIcons.strokeRoundedLocation01, size: 12, color: textSecondary),
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
@@ -407,7 +408,7 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
                                 color: primaryColor.withValues(alpha: 0.4),
                               ),
                               const SizedBox(width: 12),
-                              Icon(Icons.arrow_downward_rounded, size: 16, color: primaryColor),
+                              AppIcon(icon: HugeIcons.strokeRoundedArrowDown01, size: 16, color: primaryColor),
                               const SizedBox(width: 6),
                               Text(
                                 'Transferring to',
@@ -431,7 +432,7 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
                                 color: primaryColor.withValues(alpha: 0.15),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(Icons.add_location_alt_outlined, size: 18, color: primaryColor),
+                              child: AppIcon(icon: HugeIcons.strokeRoundedPinLocation01, size: 18, color: primaryColor),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -517,8 +518,8 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
                                               const SizedBox(height: 2),
                                               Row(
                                                 children: [
-                                                  Icon(
-                                                    Icons.location_on_outlined,
+                                                  AppIcon(
+                                                    icon: HugeIcons.strokeRoundedLocation01,
                                                     size: 11,
                                                     color: textSecondary,
                                                   ),
@@ -565,7 +566,7 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
                                         children: [
                                           Row(
                                             children: [
-                                              Icon(Icons.info_outline_rounded, size: 14, color: primaryColor),
+                                              AppIcon(icon: HugeIcons.strokeRoundedInformationCircle, size: 14, color: primaryColor),
                                               const SizedBox(width: 6),
                                               Text(
                                                 '${_selectedTargetCenter!.district} • ${_selectedTargetCenter!.area}',
@@ -582,8 +583,8 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
                                             Row(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                Icon(
-                                                  Icons.location_on_outlined,
+                                                AppIcon(
+                                                  icon: HugeIcons.strokeRoundedLocation01,
                                                   size: 13,
                                                   color: textSecondary,
                                                 ),
@@ -700,8 +701,8 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.info_outline_rounded,
+                        const AppIcon(
+                          icon: HugeIcons.strokeRoundedInformationCircle,
                           size: 20,
                           color: Color(0xFF00B0FF),
                         ),
@@ -741,7 +742,7 @@ class _TransferRequestScreenState extends State<TransferRequestScreen> {
                         : const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.send_rounded, size: 18),
+                              AppIcon(icon: HugeIcons.strokeRoundedSend, size: 18, color: Colors.white),
                               SizedBox(width: 8),
                               Text(
                                 'Submit Transfer Request',

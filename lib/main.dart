@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'widgets/app_icon.dart';
 import 'firebase_options.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/main_navigation_screen.dart';
@@ -11,6 +13,15 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  // Configure Firestore cache to bounded 100MB with offline persistence
+  try {
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: 100 * 1024 * 1024,
+    );
+  } catch (e) {
+    debugPrint('Firestore settings note: $e');
+  }
   runApp(const MainApp());
 }
 
@@ -97,8 +108,8 @@ class _AuthGateState extends State<AuthGate> {
                   color: primaryColor.withValues(alpha: 0.12),
                 ),
                 child: Center(
-                  child: Icon(
-                    Icons.account_balance_rounded,
+                  child: AppIcon(
+                    icon: HugeIcons.strokeRoundedChurch,
                     size: 36,
                     color: primaryColor,
                   ),

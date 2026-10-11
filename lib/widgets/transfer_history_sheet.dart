@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_icon.dart';
 import 'package:intl/intl.dart';
 import '../models/member.dart';
 import '../models/transfer_request.dart';
@@ -64,7 +65,7 @@ class TransferHistorySheet extends StatelessWidget {
                     color: primaryColor.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.history_rounded, color: primaryColor, size: 22),
+                  child: AppIcon(icon: HugeIcons.strokeRoundedTime02, color: primaryColor, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -87,7 +88,7 @@ class TransferHistorySheet extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded),
+                  icon: AppIcon(icon: HugeIcons.strokeRoundedCancel01, color: textSecondary, size: 22),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -112,8 +113,8 @@ class TransferHistorySheet extends StatelessWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.swap_horiz_rounded,
+                            AppIcon(
+                              icon: HugeIcons.strokeRoundedArrowLeftRight,
                               size: 44,
                               color: textSecondary.withValues(alpha: 0.4),
                             ),
@@ -211,7 +212,7 @@ class TransferHistorySheet extends StatelessWidget {
                                 ),
                                 const Padding(
                                   padding: EdgeInsets.symmetric(horizontal: 8.0),
-                                  child: Icon(Icons.arrow_forward_rounded, size: 16),
+                                  child: AppIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 16),
                                 ),
                                 Expanded(
                                   child: Column(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import 'package:intl/intl.dart';
 import '../../models/member.dart';
 import '../../services/firestore_service.dart';
@@ -17,6 +18,16 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
 
   // Filter keys: 'All', 'admin', 'district', 'area', 'local', 'member'
   String _selectedRoleFilter = 'All';
+
+  late final Stream<List<Member>> _membersStream;
+  late final Stream<Member?> _currentMemberStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _membersStream = _firestoreService.getMembersStream();
+    _currentMemberStream = _firestoreService.getCurrentMemberStream();
+  }
 
   @override
   void dispose() {
@@ -70,7 +81,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         const SnackBar(
           content: Row(
             children: [
-              Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+              AppIcon(icon: HugeIcons.strokeRoundedInformationCircle, color: Colors.white, size: 20),
               SizedBox(width: 10),
               Expanded(
                 child: Text('Only Administrators have permission to assign or change member roles.'),
@@ -106,7 +117,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                 SnackBar(
                   content: Row(
                     children: [
-                      const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                      const AppIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle01, color: Colors.white, size: 20),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text('Assigned ${member.firstName} as ${_getRoleLabel(newRole)}'),
@@ -178,7 +189,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     final borderColor = isDark ? const Color(0xFF262633) : const Color(0xFFE5E5ED);
 
     return StreamBuilder<Member?>(
-      stream: _firestoreService.getCurrentMemberStream(),
+      stream: _currentMemberStream,
       builder: (context, memberSnapshot) {
         if (memberSnapshot.connectionState == ConnectionState.waiting && !memberSnapshot.hasData) {
           return Scaffold(
@@ -192,7 +203,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                 ),
               ),
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
+                icon: AppIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: textPrimary, size: 24),
                 color: textPrimary,
                 onPressed: () => Navigator.of(context).pop(),
               ),
@@ -217,7 +228,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                 ),
               ),
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
+                icon: AppIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: textPrimary, size: 24),
                 color: textPrimary,
                 onPressed: () => Navigator.of(context).pop(),
               ),
@@ -234,8 +245,8 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                         color: const Color(0xFFFF2A55).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.lock_person_rounded,
+                      child: const AppIcon(
+                        icon: HugeIcons.strokeRoundedUserShield01,
                         size: 48,
                         color: Color(0xFFFF2A55),
                       ),
@@ -286,13 +297,13 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
             elevation: 0,
             scrolledUnderElevation: 1,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded),
+              icon: AppIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: textPrimary, size: 24),
               color: textPrimary,
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),
           body: StreamBuilder<List<Member>>(
-            stream: _firestoreService.getMembersStream(),
+            stream: _membersStream,
             builder: (context, snapshot) {
               final members = snapshot.data ?? [];
               final query = _searchController.text.trim().toLowerCase();
@@ -378,10 +389,13 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                         decoration: InputDecoration(
                           hintText: 'Search by member name, ID, center, or role...',
                           hintStyle: TextStyle(color: textSecondary, fontSize: 13),
-                          prefixIcon: Icon(Icons.search_rounded, size: 20, color: primaryColor),
+                          prefixIcon: Center(
+                            widthFactor: 1.0,
+                            child: AppIcon(icon: HugeIcons.strokeRoundedSearch01, size: 20, color: primaryColor),
+                          ),
                           suffixIcon: _searchController.text.isNotEmpty
                               ? IconButton(
-                                  icon: const Icon(Icons.clear_rounded, size: 18),
+                                  icon: const AppIcon(icon: HugeIcons.strokeRoundedCancel01, size: 18),
                                   onPressed: () {
                                     _searchController.clear();
                                     setState(() {});
@@ -462,8 +476,8 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.person_search_outlined,
+                              AppIcon(
+                                icon: HugeIcons.strokeRoundedUserSearch01,
                                 size: 48,
                                 color: textSecondary.withValues(alpha: 0.6),
                               ),
@@ -580,8 +594,8 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                                 // Assign / Edit Role Action
                                 IconButton(
                                   tooltip: canAssign ? 'Change Role' : 'View Role',
-                                  icon: Icon(
-                                    canAssign ? Icons.edit_note_rounded : Icons.info_outline_rounded,
+                                  icon: AppIcon(
+                                    icon: canAssign ? HugeIcons.strokeRoundedEdit02 : HugeIcons.strokeRoundedInformationCircle,
                                     size: 22,
                                     color: canAssign ? primaryColor : textSecondary,
                                   ),
@@ -631,35 +645,35 @@ class _RoleAssignmentModalState extends State<_RoleAssignmentModal> {
       'label': 'Administrator',
       'description': 'Full access across all Districts, Areas, and Local Centers.',
       'color': const Color(0xFFA100FF),
-      'icon': Icons.admin_panel_settings_rounded,
+      'icon': HugeIcons.strokeRoundedUserShield01,
     },
     {
       'role': 'district',
       'label': 'District Admin',
       'description': 'District-wide: Announcements, activity logs, directory, and statistics.',
       'color': const Color(0xFF00B0FF),
-      'icon': Icons.corporate_fare_rounded,
+      'icon': HugeIcons.strokeRoundedBuilding03,
     },
     {
       'role': 'area',
       'label': 'Area Coordinator',
       'description': 'Area-wide: Manage members and monitor centers under assigned area.',
       'color': const Color(0xFFFF9100),
-      'icon': Icons.hub_rounded,
+      'icon': HugeIcons.strokeRoundedHierarchy,
     },
     {
       'role': 'local',
       'label': 'Local Center Officer',
       'description': 'Local-only: View and manage members belonging to local church center.',
       'color': const Color(0xFF00C853),
-      'icon': Icons.church_rounded,
+      'icon': HugeIcons.strokeRoundedChurch,
     },
     {
       'role': 'member',
       'label': 'Church Member',
       'description': 'Standard access to personal profile, announcements, forms, and bylaws.',
       'color': const Color(0xFF88849E),
-      'icon': Icons.person_rounded,
+      'icon': HugeIcons.strokeRoundedUser,
     },
   ];
 
@@ -726,8 +740,8 @@ class _RoleAssignmentModalState extends State<_RoleAssignmentModal> {
                     color: primaryColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(
-                    Icons.admin_panel_settings_rounded,
+                  child: AppIcon(
+                    icon: HugeIcons.strokeRoundedUserShield01,
                     color: primaryColor,
                     size: 22,
                   ),
@@ -803,7 +817,7 @@ class _RoleAssignmentModalState extends State<_RoleAssignmentModal> {
                             color: color.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(icon, color: color, size: 20),
+                          child: AppIcon(icon: icon as List<List<dynamic>>, color: color, size: 20),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -832,7 +846,7 @@ class _RoleAssignmentModalState extends State<_RoleAssignmentModal> {
                         ),
                         if (isSelected) ...[
                           const SizedBox(width: 8),
-                          Icon(Icons.check_circle_rounded, color: color, size: 20),
+                          AppIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle01, color: color, size: 20),
                         ],
                       ],
                     ),
@@ -850,7 +864,7 @@ class _RoleAssignmentModalState extends State<_RoleAssignmentModal> {
               child: ElevatedButton.icon(
                 icon: _isSaving
                     ? const SizedBox.shrink()
-                    : const Icon(Icons.check_circle_rounded, size: 18),
+                    : const AppIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle01, size: 18, color: Colors.white),
                 label: _isSaving
                     ? const SizedBox(
                         width: 20,
