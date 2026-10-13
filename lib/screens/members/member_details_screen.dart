@@ -1151,365 +1151,457 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                 ),
               ),
 
-            // Section 1: Ministry Positions & Leadership (Including Category)
-            _buildSectionHeader('MINISTRY POSITIONS & LEADERSHIP', primaryColor),
-            const SizedBox(height: 10),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _buildProfileRow(
-                      context,
-                      icon: HugeIcons.strokeRoundedUserGroup,
-                      label: 'Ministry Category',
-                      value: member.dynamicCategory,
-                    ),
-                    if (member.positions.isNotEmpty) ...[
-                      ...member.positions.map((pos) {
-                        return Column(
+            // Section Details Grid (Responsive: 2-column on desktop/tablet >= 760px, 1-column on mobile)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth >= 760;
+
+                final ministryCard = _buildMinistryCard(member, context, primaryColor, dividerColor);
+                final churchCard = _buildChurchCard(member, context, primaryColor, dividerColor, isInactive);
+                final personalCard = _buildPersonalCard(member, context, primaryColor, dividerColor);
+                final contactCard = _buildContactCard(member, context, primaryColor, dividerColor);
+                final addressCard = _buildAddressCard(member, context, primaryColor, dividerColor);
+                final signatureCard = _buildSignatureCard(member, context, primaryColor, isDark);
+
+                if (isWide) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Left Column
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildDivider(dividerColor),
-                            _buildProfileRow(
-                              context,
-                              icon: HugeIcons.strokeRoundedUserGroup,
-                              label: pos.level.isNotEmpty
-                                  ? '${pos.level} Ministry'
-                                  : 'Ministry Position',
-                              value: pos.title,
-                            ),
+                            ministryCard,
+                            const SizedBox(height: 18),
+                            personalCard,
+                            const SizedBox(height: 18),
+                            addressCard,
                           ],
-                        );
-                      }),
-                    ] else ...[
-                      _buildDivider(dividerColor),
-                      _buildProfileRow(
-                        context,
-                        icon: HugeIcons.strokeRoundedUserGroup,
-                        label: 'Assigned Position',
-                        value: member.primaryRole,
+                        ),
+                      ),
+                      const SizedBox(width: 18),
+                      // Right Column
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            churchCard,
+                            const SizedBox(height: 18),
+                            contactCard,
+                            const SizedBox(height: 18),
+                            signatureCard,
+                          ],
+                        ),
                       ),
                     ],
-                  ],
-                ),
-              ),
-            ),
+                  );
+                }
 
-            const SizedBox(height: 18),
-
-            // Section 2: Church & Affiliation
-            _buildSectionHeader('CHURCH & AFFILIATION', primaryColor),
-            const SizedBox(height: 10),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _buildProfileRow(
-                      context,
-                      icon: HugeIcons.strokeRoundedChurch,
-                      label: 'Local Center / Branch',
-                      value: member.center.isNotEmpty
-                          ? member.center
-                          : 'Antipolo Center',
-                    ),
-                    _buildDivider(dividerColor),
-                    _buildProfileRow(
-                      context,
-                      icon: HugeIcons.strokeRoundedMap,
-                      label: 'District & Area',
-                      value: '${member.district} • ${member.area}',
-                    ),
-                    _buildDivider(dividerColor),
-                    _buildProfileRow(
-                      context,
-                      icon: HugeIcons.strokeRoundedCalendar03,
-                      label: 'Date Joined',
-                      value: member.formattedDateJoined,
-                    ),
-                    if (isInactive) ...[
-                      _buildDivider(dividerColor),
-                      _buildProfileRow(
-                        context,
-                        icon: HugeIcons.strokeRoundedInformationCircle,
-                        label: 'Reason for Inactivity',
-                        value: member.inactiveReason.isNotEmpty
-                            ? member.inactiveReason
-                            : 'Please indicate reason for inactivity',
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 18),
-
-            // Section 3: Personal Information
-            _buildSectionHeader('PERSONAL INFORMATION', primaryColor),
-            const SizedBox(height: 10),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _buildProfileRow(
-                      context,
-                      icon: HugeIcons.strokeRoundedBirthdayCake,
-                      label: 'Date of Birth (Age)',
-                      value: member.formattedDobWithAge,
-                    ),
-                    _buildDivider(dividerColor),
-                    _buildProfileRow(
-                      context,
-                      icon: HugeIcons.strokeRoundedUser,
-                      label: 'Gender',
-                      value: member.gender,
-                    ),
-                    _buildDivider(dividerColor),
-                    _buildProfileRow(
-                      context,
-                      icon: HugeIcons.strokeRoundedFavourite,
-                      label: 'Civil Status',
-                      value: member.civilStatus,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 18),
-
-            // Section 4: Contact Information
-            _buildSectionHeader('CONTACT INFORMATION', primaryColor),
-            const SizedBox(height: 10),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _buildProfileRow(
-                      context,
-                      icon: HugeIcons.strokeRoundedCall,
-                      label: 'Contact Number',
-                      value: member.contactNo.isNotEmpty
-                          ? member.contactNo
-                          : 'Not provided',
-                    ),
-                    _buildDivider(dividerColor),
-                    _buildProfileRow(
-                      context,
-                      icon: HugeIcons.strokeRoundedMail01,
-                      label: 'Email Address',
-                      value: member.email.isNotEmpty
-                          ? member.email
-                          : 'Not provided',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 18),
-
-            // Section 5: Address Details
-            _buildSectionHeader('ADDRESS DETAILS', primaryColor),
-            const SizedBox(height: 10),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _buildProfileRow(
-                      context,
-                      icon: HugeIcons.strokeRoundedPinLocation01,
-                      label: 'Street / Zone',
-                      value: member.street.isNotEmpty
-                          ? member.street
-                          : 'Not provided',
-                    ),
-                    _buildDivider(dividerColor),
-                    _buildProfileRow(
-                      context,
-                      icon: HugeIcons.strokeRoundedBuilding02,
-                      label: 'Barangay',
-                      value: member.barangay.isNotEmpty
-                          ? member.barangay
-                          : 'Not provided',
-                    ),
-                    _buildDivider(dividerColor),
-                    _buildProfileRow(
-                      context,
-                      icon: HugeIcons.strokeRoundedBuilding03,
-                      label: 'Municipality / City',
-                      value: member.municipality.isNotEmpty
-                          ? member.municipality
-                          : 'Antipolo',
-                    ),
-                    _buildDivider(dividerColor),
-                    _buildProfileRow(
-                      context,
-                      icon: HugeIcons.strokeRoundedGlobe,
-                      label: 'Province',
-                      value: member.province.isNotEmpty
-                          ? member.province
-                          : 'Rizal',
-                    ),
-                    _buildDivider(dividerColor),
-                    _buildProfileRow(
-                      context,
-                      icon: HugeIcons.strokeRoundedFlag01,
-                      label: 'Region',
-                      value: member.region.isNotEmpty
-                          ? member.region
-                          : 'CALABARZON',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 18),
-
-            // Section 6: Signature & Verification
-            _buildSectionHeader('SIGNATURE & VERIFICATION', primaryColor),
-            const SizedBox(height: 10),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Signature Status',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: member.signatureUrl.isNotEmpty
-                                ? Colors.green.withValues(alpha: 0.15)
-                                : (member.signatureDeclined
-                                    ? Colors.red.withValues(alpha: 0.15)
-                                    : Colors.amber.withValues(alpha: 0.15)),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            member.signatureUrl.isNotEmpty
-                                ? 'SIGNED & VERIFIED'
-                                : (member.signatureDeclined
-                                    ? 'DECLINED'
-                                    : 'NOT AVAILABLE'),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: member.signatureUrl.isNotEmpty
-                                  ? Colors.green.shade700
-                                  : (member.signatureDeclined
-                                      ? Colors.red.shade700
-                                      : Colors.amber.shade800),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (member.signatureUrl.isNotEmpty) ...[
-                      const SizedBox(height: 14),
-                      InkWell(
-                        onTap: () => _openImageViewer(
-                          context,
-                          title: member.fullName,
-                          subtitle: 'Digital Signature',
-                          imageUrl: member.signatureUrl,
-                          isSignature: true,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          height: 90,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: primaryColor.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Stack(
-                            children: [
-                              Center(
-                                child: member.signatureImageProvider != null
-                                    ? Image(
-                                        image: member.signatureImageProvider!,
-                                        fit: BoxFit.contain,
-                                        height: 75,
-                                      )
-                                    : const SizedBox.shrink(),
-                              ),
-                              Positioned(
-                                right: 8,
-                                bottom: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2.5,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.65),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      AppIcon(
-                                        icon: HugeIcons.strokeRoundedMaximize01,
-                                        size: 12,
-                                        color: Colors.white,
-                                      ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Tap to expand',
-                                        style: TextStyle(
-                                          fontSize: 9.5,
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ] else if (!member.signatureDeclined) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        'No digital signature registered on file.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.white54 : Colors.black54,
-                        ),
-                      ),
-                    ],
+                    ministryCard,
+                    const SizedBox(height: 18),
+                    churchCard,
+                    const SizedBox(height: 18),
+                    personalCard,
+                    const SizedBox(height: 18),
+                    contactCard,
+                    const SizedBox(height: 18),
+                    addressCard,
+                    const SizedBox(height: 18),
+                    signatureCard,
                   ],
-                ),
-              ),
+                );
+              },
             ),
 
             const SizedBox(height: 24),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMinistryCard(Member member, BuildContext context, Color primaryColor, Color dividerColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('MINISTRY POSITIONS & LEADERSHIP', primaryColor),
+        const SizedBox(height: 10),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildProfileRow(
+                  context,
+                  icon: HugeIcons.strokeRoundedUserGroup,
+                  label: 'Ministry Category',
+                  value: member.dynamicCategory,
+                ),
+                if (member.positions.isNotEmpty) ...[
+                  ...member.positions.map((pos) {
+                    return Column(
+                      children: [
+                        _buildDivider(dividerColor),
+                        _buildProfileRow(
+                          context,
+                          icon: HugeIcons.strokeRoundedUserGroup,
+                          label: pos.level.isNotEmpty
+                              ? '${pos.level} Ministry'
+                              : 'Ministry Position',
+                          value: pos.title,
+                        ),
+                      ],
+                    );
+                  }),
+                ] else ...[
+                  _buildDivider(dividerColor),
+                  _buildProfileRow(
+                    context,
+                    icon: HugeIcons.strokeRoundedUserGroup,
+                    label: 'Assigned Position',
+                    value: member.primaryRole,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChurchCard(Member member, BuildContext context, Color primaryColor, Color dividerColor, bool isInactive) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('CHURCH & AFFILIATION', primaryColor),
+        const SizedBox(height: 10),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildProfileRow(
+                  context,
+                  icon: HugeIcons.strokeRoundedChurch,
+                  label: 'Local Center / Branch',
+                  value: member.center.isNotEmpty
+                      ? member.center
+                      : 'Antipolo Center',
+                ),
+                _buildDivider(dividerColor),
+                _buildProfileRow(
+                  context,
+                  icon: HugeIcons.strokeRoundedMap,
+                  label: 'District & Area',
+                  value: '${member.district} • ${member.area}',
+                ),
+                _buildDivider(dividerColor),
+                _buildProfileRow(
+                  context,
+                  icon: HugeIcons.strokeRoundedCalendar03,
+                  label: 'Date Joined',
+                  value: member.formattedDateJoined,
+                ),
+                if (isInactive) ...[
+                  _buildDivider(dividerColor),
+                  _buildProfileRow(
+                    context,
+                    icon: HugeIcons.strokeRoundedInformationCircle,
+                    label: 'Reason for Inactivity',
+                    value: member.inactiveReason.isNotEmpty
+                        ? member.inactiveReason
+                        : 'Please indicate reason for inactivity',
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPersonalCard(Member member, BuildContext context, Color primaryColor, Color dividerColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('PERSONAL INFORMATION', primaryColor),
+        const SizedBox(height: 10),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildProfileRow(
+                  context,
+                  icon: HugeIcons.strokeRoundedBirthdayCake,
+                  label: 'Date of Birth (Age)',
+                  value: member.formattedDobWithAge,
+                ),
+                _buildDivider(dividerColor),
+                _buildProfileRow(
+                  context,
+                  icon: HugeIcons.strokeRoundedUser,
+                  label: 'Gender',
+                  value: member.gender,
+                ),
+                _buildDivider(dividerColor),
+                _buildProfileRow(
+                  context,
+                  icon: HugeIcons.strokeRoundedFavourite,
+                  label: 'Civil Status',
+                  value: member.civilStatus,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContactCard(Member member, BuildContext context, Color primaryColor, Color dividerColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('CONTACT INFORMATION', primaryColor),
+        const SizedBox(height: 10),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildProfileRow(
+                  context,
+                  icon: HugeIcons.strokeRoundedCall,
+                  label: 'Contact Number',
+                  value: member.contactNo.isNotEmpty
+                      ? member.contactNo
+                      : 'Not provided',
+                ),
+                _buildDivider(dividerColor),
+                _buildProfileRow(
+                  context,
+                  icon: HugeIcons.strokeRoundedMail01,
+                  label: 'Email Address',
+                  value: member.email.isNotEmpty
+                      ? member.email
+                      : 'Not provided',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddressCard(Member member, BuildContext context, Color primaryColor, Color dividerColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('ADDRESS DETAILS', primaryColor),
+        const SizedBox(height: 10),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildProfileRow(
+                  context,
+                  icon: HugeIcons.strokeRoundedPinLocation01,
+                  label: 'Street / Zone',
+                  value: member.street.isNotEmpty
+                      ? member.street
+                      : 'Not provided',
+                ),
+                _buildDivider(dividerColor),
+                _buildProfileRow(
+                  context,
+                  icon: HugeIcons.strokeRoundedBuilding02,
+                  label: 'Barangay',
+                  value: member.barangay.isNotEmpty
+                      ? member.barangay
+                      : 'Not provided',
+                ),
+                _buildDivider(dividerColor),
+                _buildProfileRow(
+                  context,
+                  icon: HugeIcons.strokeRoundedBuilding03,
+                  label: 'Municipality / City',
+                  value: member.municipality.isNotEmpty
+                      ? member.municipality
+                      : 'Antipolo',
+                ),
+                _buildDivider(dividerColor),
+                _buildProfileRow(
+                  context,
+                  icon: HugeIcons.strokeRoundedGlobe,
+                  label: 'Province',
+                  value: member.province.isNotEmpty
+                      ? member.province
+                      : 'Rizal',
+                ),
+                _buildDivider(dividerColor),
+                _buildProfileRow(
+                  context,
+                  icon: HugeIcons.strokeRoundedFlag01,
+                  label: 'Region',
+                  value: member.region.isNotEmpty
+                      ? member.region
+                      : 'CALABARZON',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSignatureCard(Member member, BuildContext context, Color primaryColor, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('SIGNATURE & VERIFICATION', primaryColor),
+        const SizedBox(height: 10),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Signature Status',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: member.signatureUrl.isNotEmpty
+                            ? Colors.green.withValues(alpha: 0.15)
+                            : (member.signatureDeclined
+                                ? Colors.red.withValues(alpha: 0.15)
+                                : Colors.amber.withValues(alpha: 0.15)),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        member.signatureUrl.isNotEmpty
+                            ? 'SIGNED & VERIFIED'
+                            : (member.signatureDeclined
+                                ? 'DECLINED'
+                                : 'NOT AVAILABLE'),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: member.signatureUrl.isNotEmpty
+                              ? Colors.green.shade700
+                              : (member.signatureDeclined
+                                  ? Colors.red.shade700
+                                  : Colors.amber.shade800),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (member.signatureUrl.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  InkWell(
+                    onTap: () => _openImageViewer(
+                      context,
+                      title: member.fullName,
+                      subtitle: 'Digital Signature',
+                      imageUrl: member.signatureUrl,
+                      isSignature: true,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      height: 90,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: primaryColor.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: member.signatureImageProvider != null
+                                ? Image(
+                                    image: member.signatureImageProvider!,
+                                    fit: BoxFit.contain,
+                                    height: 75,
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                          Positioned(
+                            right: 8,
+                            bottom: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2.5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AppIcon(
+                                    icon: HugeIcons.strokeRoundedMaximize01,
+                                    size: 12,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Tap to expand',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ] else if (!member.signatureDeclined) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'No digital signature registered on file.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white54 : Colors.black54,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -101,10 +102,53 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
   Member? _currentUser;
   bool _isLoading = false;
 
-  void _onNameFieldChanged() {
+  String _initialFormSnapshot = '';
+
+  void _onFormFieldChanged() {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  String _computeFormSnapshot() {
+    final posList = _positionItems
+        .where((item) => item.controller.text.trim().isNotEmpty)
+        .map((item) => '${item.level}:${item.controller.text.trim()}')
+        .toList();
+    return jsonEncode({
+      'memberId': _memberIdController.text.trim(),
+      'firstName': _firstNameController.text.trim(),
+      'middleName': _middleNameController.text.trim(),
+      'lastName': _lastNameController.text.trim(),
+      'dob': _dobController.text.trim(),
+      'gender': _gender,
+      'civilStatus': _civilStatus,
+      'category': _dynamicCategory,
+      'email': _emailController.text.trim().toLowerCase(),
+      'contactNo': _contactNoController.text.trim(),
+      'region': _selectedRegion?.regionName ?? '',
+      'province': _selectedProvince?.name ?? '',
+      'municipality': _selectedMunicipality?.name ?? '',
+      'barangay': _selectedBarangay ?? '',
+      'street': _streetController.text.trim(),
+      'district': _selectedDistrict,
+      'area': _selectedArea,
+      'center': _selectedCenter,
+      'membershipStatus': _membershipStatus,
+      'inactiveReason': _isInactive ? _inactiveReason.trim() : '',
+      'memberType': _memberType,
+      'dateJoined': DateFormat('yyyy-MM-dd').format(_selectedDateJoined),
+      'profileBase64': _profileBase64.trim(),
+      'signatureBase64': _signatureDeclined ? '' : _signatureBase64.trim(),
+      'signatureDeclined': _signatureDeclined,
+      'positions': posList,
+    });
+  }
+
+  bool get _hasChanges {
+    if (widget.memberToEdit == null) return false;
+    if (_initialFormSnapshot.isEmpty) return false;
+    return _computeFormSnapshot() != _initialFormSnapshot;
   }
 
   List<Member> get _nameDuplicates {
@@ -183,9 +227,14 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
     super.initState();
     _loadCenters();
 
-    _firstNameController.addListener(_onNameFieldChanged);
-    _middleNameController.addListener(_onNameFieldChanged);
-    _lastNameController.addListener(_onNameFieldChanged);
+    _memberIdController.addListener(_onFormFieldChanged);
+    _firstNameController.addListener(_onFormFieldChanged);
+    _middleNameController.addListener(_onFormFieldChanged);
+    _lastNameController.addListener(_onFormFieldChanged);
+    _dobController.addListener(_onFormFieldChanged);
+    _contactNoController.addListener(_onFormFieldChanged);
+    _emailController.addListener(_onFormFieldChanged);
+    _streetController.addListener(_onFormFieldChanged);
 
     _firestoreService
         .getCurrentMember()
@@ -298,13 +347,24 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
         _allExistingMembers,
       );
     }
+
+    for (final item in _positionItems) {
+      item.controller.addListener(_onFormFieldChanged);
+    }
+
+    _initialFormSnapshot = _computeFormSnapshot();
   }
 
   @override
   void dispose() {
-    _firstNameController.removeListener(_onNameFieldChanged);
-    _middleNameController.removeListener(_onNameFieldChanged);
-    _lastNameController.removeListener(_onNameFieldChanged);
+    _memberIdController.removeListener(_onFormFieldChanged);
+    _firstNameController.removeListener(_onFormFieldChanged);
+    _middleNameController.removeListener(_onFormFieldChanged);
+    _lastNameController.removeListener(_onFormFieldChanged);
+    _dobController.removeListener(_onFormFieldChanged);
+    _contactNoController.removeListener(_onFormFieldChanged);
+    _emailController.removeListener(_onFormFieldChanged);
+    _streetController.removeListener(_onFormFieldChanged);
     _memberIdController.dispose();
     _firstNameController.dispose();
     _middleNameController.dispose();
@@ -314,6 +374,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
     _emailController.dispose();
     _streetController.dispose();
     for (final item in _positionItems) {
+      item.controller.removeListener(_onFormFieldChanged);
       item.dispose();
     }
     super.dispose();
@@ -331,6 +392,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
             _selectedCenter = _currentUser!.center;
           } else {
             _selectedCenter = centers.first.centerName;
+          }
+          if (widget.memberToEdit != null && _initialFormSnapshot.isNotEmpty) {
+            _initialFormSnapshot = _computeFormSnapshot();
           }
         }
       });
@@ -711,6 +775,77 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
     }
   }
 
+  Future<bool> _showDiscardChangesDialog(BuildContext context) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.amber,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Discard Changes?',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'You have unsaved changes to this member profile. Are you sure you want to discard your edits and exit?',
+          style: TextStyle(fontSize: 14, height: 1.4),
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Keep Editing',
+              style: TextStyle(
+                color: isDark ? Colors.white70 : Colors.black87,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF2A55),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Discard & Exit',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   Future<void> _submitForm() async {
     if (_isInactive) {
       if (_inactiveReason.trim().isEmpty) {
@@ -808,8 +943,14 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
         await _firestoreService.updateMember(
           updatedMember,
           originalMember: widget.memberToEdit,
+        ).timeout(
+          const Duration(seconds: 15),
+          onTimeout: () {
+            throw TimeoutException('Updating member timed out. Please check your network connection.');
+          },
         );
 
+        _initialFormSnapshot = _computeFormSnapshot();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -877,7 +1018,12 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
         updatedAt: nowStr,
       );
 
-      final newDocId = await _firestoreService.addMember(newMember);
+      final newDocId = await _firestoreService.addMember(newMember).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw TimeoutException('Adding member timed out. Please check your network connection.');
+        },
+      );
       final createdMember = newMember.copyWith(id: newDocId);
 
       if (mounted) {
@@ -896,12 +1042,23 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
         );
         Navigator.of(context).pop(createdMember);
       }
+    } on TimeoutException catch (te) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(te.message ?? 'Operation timed out. Please try again.'),
+            backgroundColor: Colors.orangeAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to save member: $e'),
             backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -951,7 +1108,16 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
         )
         .toList();
 
-    return Scaffold(
+    return PopScope(
+      canPop: widget.memberToEdit == null ? true : !_hasChanges,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldDiscard = await _showDiscardChangesDialog(context);
+        if (shouldDiscard && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text(
           widget.memberToEdit != null
@@ -1477,12 +1643,12 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                           TextButton.icon(
                             onPressed: () {
                               setState(() {
-                                _positionItems.add(
-                                  PositionFormItem(
-                                    level: 'Local',
-                                    initialPosition: '',
-                                  ),
+                                final newItem = PositionFormItem(
+                                  level: 'Local',
+                                  initialPosition: '',
                                 );
+                                newItem.controller.addListener(_onFormFieldChanged);
+                                _positionItems.add(newItem);
                               });
                             },
                             icon: const Icon(Icons.add_rounded, size: 16),
@@ -1550,6 +1716,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                                     ),
                                     onPressed: () {
                                       setState(() {
+                                        item.controller.removeListener(_onFormFieldChanged);
                                         item.dispose();
                                         _positionItems.removeAt(index);
                                       });
@@ -1785,14 +1952,43 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+
+              // Status notice when in edit mode with no changes
+              if (widget.memberToEdit != null && !_hasChanges)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 14,
+                          color: isDark ? Colors.white38 : Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'No changes made. Modify any field to save.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.white38 : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
               // Submit Button
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _submitForm,
+                  onPressed: (_isLoading ||
+                          (widget.memberToEdit != null && !_hasChanges))
+                      ? null
+                      : _submitForm,
                   icon: _isLoading
                       ? const SizedBox(
                           width: 18,
@@ -1820,6 +2016,12 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor: isDark
+                        ? const Color(0xFF2C2C36)
+                        : Colors.grey.shade300,
+                    disabledForegroundColor: isDark
+                        ? Colors.white38
+                        : Colors.grey.shade500,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -1832,7 +2034,8 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildSectionHeader(String title, Color primaryColor) {

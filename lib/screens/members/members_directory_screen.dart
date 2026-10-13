@@ -380,7 +380,13 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
               else
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 4, 20, 84),
-                  sliver: SliverList(
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 400,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 12,
+                      mainAxisExtent: 98,
+                    ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final member = filteredMembers[index];
@@ -407,7 +413,6 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
                         }).toList();
 
                         return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: borderColor, width: 1.1),
@@ -423,7 +428,7 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
                             color: cardBg,
                             borderRadius: BorderRadius.circular(16),
                             clipBehavior: Clip.antiAlias,
-                            child: ListTile(
+                            child: InkWell(
                               onTap: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -436,198 +441,204 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
                               },
                               splashColor: primaryColor.withValues(alpha: 0.14),
                               hoverColor: primaryColor.withValues(alpha: 0.05),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            // Profile photo
-                            leading: Builder(
-                              builder: (context) {
-                                final avatarProvider = member.profileImageProvider;
-                                return Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isInactive
-                                        ? Colors.grey.withValues(alpha: 0.15)
-                                        : primaryColor.withValues(alpha: 0.12),
-                                    border: Border.all(
-                                      color: isInactive
-                                          ? Colors.grey.withValues(alpha: 0.3)
-                                          : primaryColor.withValues(alpha: 0.3),
-                                      width: 1.5,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    // Profile photo
+                                    Builder(
+                                      builder: (context) {
+                                        final avatarProvider = member.profileImageProvider;
+                                        return Container(
+                                          width: 48,
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: isInactive
+                                                ? Colors.grey.withValues(alpha: 0.15)
+                                                : primaryColor.withValues(alpha: 0.12),
+                                            border: Border.all(
+                                              color: isInactive
+                                                  ? Colors.grey.withValues(alpha: 0.3)
+                                                  : primaryColor.withValues(alpha: 0.3),
+                                              width: 1.5,
+                                            ),
+                                            image: avatarProvider != null
+                                                ? DecorationImage(
+                                                    image: avatarProvider,
+                                                    fit: BoxFit.cover,
+                                                  )
+                                                : null,
+                                          ),
+                                          child: avatarProvider == null
+                                              ? Center(
+                                                  child: Text(
+                                                    member.firstName.isNotEmpty
+                                                        ? member.firstName[0].toUpperCase()
+                                                        : 'M',
+                                                    style: TextStyle(
+                                                      fontSize: 18,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: isInactive ? textSecondary : primaryColor,
+                                                    ),
+                                                  ),
+                                                )
+                                              : null,
+                                        );
+                                      },
                                     ),
-                                    image: avatarProvider != null
-                                        ? DecorationImage(
-                                            image: avatarProvider,
-                                            fit: BoxFit.cover,
-                                          )
-                                        : null,
-                                  ),
-                                  child: avatarProvider == null
-                                      ? Center(
-                                          child: Text(
-                                            member.firstName.isNotEmpty
-                                                ? member.firstName[0].toUpperCase()
-                                                : 'M',
+                                    const SizedBox(width: 12),
+                                    // Member Full Name & Details
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            member.fullName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
-                                              fontSize: 18,
+                                              fontSize: 15.5,
                                               fontWeight: FontWeight.bold,
+                                              color: isInactive ? textSecondary : textPrimary,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            member.positionsSummary,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
                                               color: isInactive ? textSecondary : primaryColor,
                                             ),
                                           ),
-                                        )
-                                      : null,
-                                );
-                              },
-                            ),
-                            // Member Full Name
-                            title: Text(
-                              member.fullName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 15.5,
-                                fontWeight: FontWeight.bold,
-                                color: isInactive ? textSecondary : textPrimary,
-                              ),
-                            ),
-                            // Positions & Duplicate indicator
-                            subtitle: Padding(
-                              padding: const EdgeInsets.only(top: 3.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    member.positionsSummary,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: isInactive ? textSecondary : primaryColor,
-                                    ),
-                                  ),
-                                  if (otherCenters.isNotEmpty) ...[
-                                    const SizedBox(height: 5),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 7.5, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: Colors.amber.withValues(alpha: isDark ? 0.22 : 0.12),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(
-                                          color: Colors.amber.withValues(alpha: 0.5),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          AppIcon(
-                                            icon: HugeIcons.strokeRoundedAlert02,
-                                            size: 12,
-                                            color: Colors.amber.shade900,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Flexible(
-                                            child: Text(
-                                              'Duplicate: ${otherCenters.join(', ')}',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w700,
-                                                color: Colors.amber.shade900,
+                                          if (otherCenters.isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 7.5, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: Colors.amber.withValues(alpha: isDark ? 0.22 : 0.12),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: Colors.amber.withValues(alpha: 0.5),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  AppIcon(
+                                                    icon: HugeIcons.strokeRoundedAlert02,
+                                                    size: 12,
+                                                    color: Colors.amber.shade900,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Flexible(
+                                                    child: Text(
+                                                      'Duplicate: ${otherCenters.join(', ')}',
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight: FontWeight.w700,
+                                                        color: Colors.amber.shade900,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                          ),
+                                          ] else if (duplicatesInSameCenter.isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 7.5, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: Colors.amber.withValues(alpha: isDark ? 0.22 : 0.12),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: Colors.amber.withValues(alpha: 0.5),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  AppIcon(
+                                                    icon: HugeIcons.strokeRoundedCopy01,
+                                                    size: 12,
+                                                    color: Colors.amber.shade900,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Flexible(
+                                                    child: Text(
+                                                      'Duplicate: Same Center (${member.center.isNotEmpty ? member.center : "Local"})',
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight: FontWeight.w700,
+                                                        color: Colors.amber.shade900,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
                                         ],
                                       ),
                                     ),
-                                  ] else if (duplicatesInSameCenter.isNotEmpty) ...[
-                                    const SizedBox(height: 5),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 7.5, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: Colors.amber.withValues(alpha: isDark ? 0.22 : 0.12),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(
-                                          color: Colors.amber.withValues(alpha: 0.5),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          AppIcon(
-                                            icon: HugeIcons.strokeRoundedCopy01,
-                                            size: 12,
-                                            color: Colors.amber.shade900,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Flexible(
+                                    const SizedBox(width: 8),
+                                    // Trailing Status / Completeness Badge
+                                    isInactive
+                                        ? Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                                            decoration: BoxDecoration(
+                                              color: isDark
+                                                  ? Colors.white.withValues(alpha: 0.08)
+                                                  : Colors.black.withValues(alpha: 0.06),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
                                             child: Text(
-                                              'Duplicate: Same Center (${member.center.isNotEmpty ? member.center : "Local"})',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
+                                              'Inactive',
                                               style: TextStyle(
                                                 fontSize: 11,
-                                                fontWeight: FontWeight.w700,
-                                                color: Colors.amber.shade900,
+                                                fontWeight: FontWeight.w600,
+                                                color: textSecondary,
+                                              ),
+                                            ),
+                                          )
+                                        : Tooltip(
+                                            message: isComplete
+                                                ? 'Profile Complete'
+                                                : 'Profile Incomplete (${member.missingFields.length} missing)',
+                                            child: Container(
+                                              padding: const EdgeInsets.all(5),
+                                              decoration: BoxDecoration(
+                                                color: isComplete
+                                                    ? Colors.green.withValues(alpha: isDark ? 0.2 : 0.12)
+                                                    : Colors.amber.withValues(alpha: isDark ? 0.2 : 0.14),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: AppIcon(
+                                                icon: isComplete
+                                                    ? HugeIcons.strokeRoundedCheckmarkCircle01
+                                                    : HugeIcons.strokeRoundedAlert02,
+                                                size: 15,
+                                                color: isComplete ? Colors.green : Colors.amber.shade800,
                                               ),
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
                                   ],
-                                ],
+                                ),
                               ),
                             ),
-                            // Status Badge & Trailing Chevron
-                            // Trailing Status / Completeness Badge (No Chevron)
-                            trailing: isInactive
-                                ? Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                                    decoration: BoxDecoration(
-                                      color: isDark
-                                          ? Colors.white.withValues(alpha: 0.08)
-                                          : Colors.black.withValues(alpha: 0.06),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'Inactive',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: textSecondary,
-                                      ),
-                                    ),
-                                  )
-                                : Tooltip(
-                                    message: isComplete
-                                        ? 'Profile Complete'
-                                        : 'Profile Incomplete (${member.missingFields.length} missing)',
-                                    child: Container(
-                                      padding: const EdgeInsets.all(5),
-                                      decoration: BoxDecoration(
-                                        color: isComplete
-                                            ? Colors.green.withValues(alpha: isDark ? 0.2 : 0.12)
-                                            : Colors.amber.withValues(alpha: isDark ? 0.2 : 0.14),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: AppIcon(
-                                        icon: isComplete
-                                            ? HugeIcons.strokeRoundedCheckmarkCircle01
-                                            : HugeIcons.strokeRoundedAlert02,
-                                        size: 15,
-                                        color: isComplete ? Colors.green : Colors.amber.shade800,
-                                      ),
-                                    ),
-                                  ),
                           ),
-                        ),
                       );
                       },
                       childCount: filteredMembers.length,

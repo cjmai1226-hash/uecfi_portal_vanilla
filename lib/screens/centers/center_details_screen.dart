@@ -1069,14 +1069,18 @@ class _CenterDetailsScreenState extends State<CenterDetailsScreen> {
               else
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                  sliver: SliverList(
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 400,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 12,
+                      mainAxisExtent: 92,
+                    ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final member = filteredMembers[index];
                       final isComplete = member.isProfileComplete;
-                      final missing = member.missingFields;
 
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
                           color: cardBg,
                           borderRadius: BorderRadius.circular(16),
@@ -1106,242 +1110,171 @@ class _CenterDetailsScreenState extends State<CenterDetailsScreen> {
                               );
                             },
                             child: Padding(
-                              padding: const EdgeInsets.all(14),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Row(
-                                    children: [
-                                      // Member Avatar
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: SizedBox(
-                                          width: 46,
-                                          height: 46,
-                                          child: member.profileUrl.isNotEmpty &&
-                                                  member.profileUrl != 'N/A'
-                                              ? CachedNetworkImage(
-                                                  imageUrl: member.profileUrl,
-                                                  fit: BoxFit.cover,
-                                                  placeholder: (ctx, url) =>
-                                                      Container(
-                                                    color: primaryColor.withValues(
-                                                      alpha: isDark ? 0.2 : 0.1,
-                                                    ),
-                                                  ),
-                                                  errorWidget:
-                                                      (ctx, url, error) =>
-                                                          _buildAvatarFallback(
-                                                    member,
-                                                    primaryColor,
-                                                    isDark,
-                                                  ),
-                                                )
-                                              : _buildAvatarFallback(
-                                                  member,
-                                                  primaryColor,
-                                                  isDark,
+                                  // Member Avatar
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: SizedBox(
+                                      width: 46,
+                                      height: 46,
+                                      child: member.profileUrl.isNotEmpty &&
+                                              member.profileUrl != 'N/A'
+                                          ? CachedNetworkImage(
+                                              imageUrl: member.profileUrl,
+                                              fit: BoxFit.cover,
+                                              placeholder: (ctx, url) =>
+                                                  Container(
+                                                color: primaryColor.withValues(
+                                                  alpha: isDark ? 0.2 : 0.1,
                                                 ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
+                                              ),
+                                              errorWidget:
+                                                  (ctx, url, error) =>
+                                                      _buildAvatarFallback(
+                                                member,
+                                                primaryColor,
+                                                isDark,
+                                              ),
+                                            )
+                                          : _buildAvatarFallback(
+                                              member,
+                                              primaryColor,
+                                              isDark,
+                                            ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
 
-                                      // Member Name & Info
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                  // Member Name & Info
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          member.fullName,
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: textPrimary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          '${member.memberId} • ${member.primaryPosition.isNotEmpty ? member.primaryPosition : member.dynamicCategory}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: textSecondary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
                                           children: [
-                                            Text(
-                                              member.fullName,
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.bold,
-                                                color: textPrimary,
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 5.5,
+                                                vertical: 1.5,
                                               ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 3),
-                                            Text(
-                                              '${member.memberId} • ${member.primaryPosition.isNotEmpty ? member.primaryPosition : member.dynamicCategory}',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: textSecondary,
+                                              decoration: BoxDecoration(
+                                                color: (member.memberType.toLowerCase() == 'new'
+                                                        ? const Color(0xFF2979FF)
+                                                        : const Color(0xFF00B0FF))
+                                                    .withValues(alpha: isDark ? 0.22 : 0.12),
+                                                borderRadius: BorderRadius.circular(4),
                                               ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
+                                              child: Text(
+                                                member.memberType.toUpperCase(),
+                                                style: TextStyle(
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  letterSpacing: 0.4,
+                                                  color: member.memberType.toLowerCase() == 'new'
+                                                      ? const Color(0xFF2979FF)
+                                                      : const Color(0xFF00B0FF),
+                                                ),
+                                              ),
                                             ),
-                                            const SizedBox(height: 4),
-                                            Row(
-                                              children: [
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(
-                                                    horizontal: 5.5,
-                                                    vertical: 1.5,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: (member.memberType.toLowerCase() == 'new'
-                                                            ? const Color(0xFF2979FF)
-                                                            : const Color(0xFF00B0FF))
-                                                        .withValues(alpha: isDark ? 0.22 : 0.12),
-                                                    borderRadius: BorderRadius.circular(4),
-                                                  ),
-                                                  child: Text(
-                                                    member.memberType.toUpperCase(),
-                                                    style: TextStyle(
-                                                      fontSize: 9.5,
-                                                      fontWeight: FontWeight.w800,
-                                                      letterSpacing: 0.4,
-                                                      color: member.memberType.toLowerCase() == 'new'
-                                                          ? const Color(0xFF2979FF)
-                                                          : const Color(0xFF00B0FF),
-                                                    ),
-                                                  ),
+                                            const SizedBox(width: 5),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 5.5,
+                                                vertical: 1.5,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: isDark
+                                                    ? Colors.white10
+                                                    : Colors.black.withValues(alpha: 0.05),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                member.dynamicCategory,
+                                                style: TextStyle(
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: textSecondary,
                                                 ),
-                                                const SizedBox(width: 5),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(
-                                                    horizontal: 5.5,
-                                                    vertical: 1.5,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: isDark
-                                                        ? Colors.white10
-                                                        : Colors.black.withValues(alpha: 0.05),
-                                                    borderRadius: BorderRadius.circular(4),
-                                                  ),
-                                                  child: Text(
-                                                    member.dynamicCategory,
-                                                    style: TextStyle(
-                                                      fontSize: 9.5,
-                                                      fontWeight: FontWeight.w700,
-                                                      color: textSecondary,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
+                                              ),
                                             ),
                                           ],
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-
-                                      // Status Badge
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 3.5,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: member.isInactive
-                                              ? Colors.redAccent.withValues(
-                                                  alpha: isDark ? 0.2 : 0.1,
-                                                )
-                                              : (isComplete
-                                                  ? const Color(0xFF00C853)
-                                                      .withValues(
-                                                      alpha: isDark ? 0.2 : 0.1,
-                                                    )
-                                                  : Colors.amber.shade800
-                                                      .withValues(
-                                                      alpha: isDark ? 0.2 : 0.1,
-                                                    )),
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          member.isInactive
-                                              ? 'Inactive'
-                                              : (isComplete
-                                                  ? 'Complete'
-                                                  : 'Incomplete'),
-                                          style: TextStyle(
-                                            fontSize: 10.5,
-                                            fontWeight: FontWeight.w700,
-                                            color: member.isInactive
-                                                ? Colors.redAccent
-                                                : (isComplete
-                                                    ? const Color(0xFF00C853)
-                                                    : Colors.amber.shade800),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  // Missing Fields Checklist Tags for Incomplete Profiles
-                                  if (!member.isInactive && !isComplete && missing.isNotEmpty) ...[
-                                    const SizedBox(height: 10),
-                                    Wrap(
-                                      spacing: 6,
-                                      runSpacing: 4,
-                                      children: [
-                                        ...missing.take(3).map((f) => Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 6,
-                                                vertical: 2,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.amber.shade800
-                                                    .withValues(
-                                                  alpha: isDark ? 0.15 : 0.08,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(4),
-                                                border: Border.all(
-                                                  color: Colors.amber.shade800
-                                                      .withValues(alpha: 0.3),
-                                                  width: 0.8,
-                                                ),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(
-                                                    Icons.close_rounded,
-                                                    size: 10,
-                                                    color: Colors.amber.shade800,
-                                                  ),
-                                                  const SizedBox(width: 3),
-                                                  Text(
-                                                    f,
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.w600,
-                                                      color: Colors.amber.shade800,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            )),
-                                        if (missing.length > 3)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: isDark
-                                                  ? Colors.white10
-                                                  : Colors.black.withValues(
-                                                      alpha: 0.05,
-                                                    ),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              '+${missing.length - 3} more',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w600,
-                                                color: textSecondary,
-                                              ),
-                                            ),
-                                          ),
                                       ],
                                     ),
-                                  ],
+                                  ),
+                                  const SizedBox(width: 8),
+
+                                  // Status Badge
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3.5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: member.isInactive
+                                          ? Colors.redAccent.withValues(
+                                              alpha: isDark ? 0.2 : 0.1,
+                                            )
+                                          : (isComplete
+                                              ? const Color(0xFF00C853)
+                                                  .withValues(
+                                                  alpha: isDark ? 0.2 : 0.1,
+                                                )
+                                              : Colors.amber.shade800
+                                                  .withValues(
+                                                  alpha: isDark ? 0.2 : 0.1,
+                                                )),
+                                      borderRadius:
+                                          BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      member.isInactive
+                                          ? 'Inactive'
+                                          : (isComplete
+                                              ? 'Complete'
+                                              : 'Incomplete'),
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: member.isInactive
+                                            ? Colors.redAccent
+                                            : (isComplete
+                                                ? const Color(0xFF00C853)
+                                                : Colors.amber.shade800),
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),

@@ -783,7 +783,7 @@ class _RoleAssignmentModalState extends State<_RoleAssignmentModal> {
               final label = def['label'] as String;
               final desc = def['description'] as String;
               final color = def['color'] as Color;
-              final icon = def['icon'] as IconData;
+              final icon = def['icon'];
 
               final isSelected = _selectedRole == roleKey;
 
@@ -817,7 +817,7 @@ class _RoleAssignmentModalState extends State<_RoleAssignmentModal> {
                             color: color.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: AppIcon(icon: icon as List<List<dynamic>>, color: color, size: 20),
+                          child: AppIcon(icon: icon, color: color, size: 20),
                         ),
                         const SizedBox(width: 12),
                         Expanded(

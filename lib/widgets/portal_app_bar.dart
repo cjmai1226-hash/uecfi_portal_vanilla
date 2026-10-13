@@ -9,6 +9,7 @@ import '../services/firestore_service.dart';
 class PortalAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onMenuPressed;
   final VoidCallback? onAddPressed;
+  final bool showMenuButton;
   @Deprecated('Use onAddPressed instead')
   final VoidCallback? onSearchPressed;
 
@@ -17,6 +18,7 @@ class PortalAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onMenuPressed,
     this.onAddPressed,
     this.onSearchPressed,
+    this.showMenuButton = true,
   });
 
   @override
@@ -24,6 +26,7 @@ class PortalAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.sizeOf(context).width >= 840;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
     final textPrimary = isDark
@@ -35,23 +38,28 @@ class PortalAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       scrolledUnderElevation: 1,
       centerTitle: false,
-      leading: IconButton(
-        icon: AppIcon(
-          icon: HugeIcons.strokeRoundedMenu01,
-          size: 24,
-          color: textPrimary,
-        ),
-        tooltip: 'Portal Menu',
-        onPressed:
-            onMenuPressed ??
-            () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const PortalMenuScreen(),
-                ),
-              );
-            },
-      ),
+      automaticallyImplyLeading: showMenuButton,
+      leading: showMenuButton
+          ? IconButton(
+              icon: AppIcon(
+                icon: isDesktop
+                    ? HugeIcons.strokeRoundedMoreHorizontal
+                    : HugeIcons.strokeRoundedMenu01,
+                size: 24,
+                color: textPrimary,
+              ),
+              tooltip: isDesktop ? 'More / Portal Menu' : 'Portal Menu',
+              onPressed:
+                  onMenuPressed ??
+                  () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const PortalMenuScreen(),
+                      ),
+                    );
+                  },
+            )
+          : null,
       titleSpacing: 4,
       title: Text(
         'uecfi portal',

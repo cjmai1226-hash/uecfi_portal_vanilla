@@ -699,7 +699,13 @@ class _StatsScreenState extends State<StatsScreen> {
               else
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
-                  sliver: SliverList(
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 400,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 12,
+                      mainAxisExtent: 106,
+                    ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final center = filteredCenters[index];
 
@@ -714,7 +720,6 @@ class _StatsScreenState extends State<StatsScreen> {
                       final double centerRatio = stats['ratio'] as double;
 
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
                           color: cardBg,
                           borderRadius: BorderRadius.circular(16),
@@ -746,15 +751,18 @@ class _StatsScreenState extends State<StatsScreen> {
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
-                                vertical: 14,
+                                vertical: 12,
                               ),
                               child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   // Center Info: Center Name and below it the Center Address
                                   Expanded(
                                     child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
                                           center.centerName,

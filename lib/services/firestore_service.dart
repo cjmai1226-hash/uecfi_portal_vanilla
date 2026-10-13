@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -57,7 +58,8 @@ class FirestoreService {
             .collection('members')
             .where('email', isEqualTo: userEmail)
             .limit(1)
-            .get();
+            .get()
+            .timeout(const Duration(seconds: 5));
         if (query.docs.isNotEmpty) {
           return Member.fromFirestore(query.docs.first);
         }
@@ -67,7 +69,11 @@ class FirestoreService {
     }
 
     try {
-      final doc = await _firestore.collection('members').doc(user.uid).get();
+      final doc = await _firestore
+          .collection('members')
+          .doc(user.uid)
+          .get()
+          .timeout(const Duration(seconds: 5));
       if (doc.exists) {
         return Member.fromFirestore(doc);
       }
@@ -113,7 +119,7 @@ class FirestoreService {
   /// One-time fetch of all Members from Firestore
   Future<List<Member>> getMembersOnce() async {
     try {
-      final snapshot = await _firestore.collection('members').get();
+      final snapshot = await _firestore.collection('members').get().timeout(const Duration(seconds: 10));
       return snapshot.docs
           .map((doc) => Member.fromFirestore(doc))
           .where((m) => m.fullName.trim().isNotEmpty)
@@ -127,7 +133,11 @@ class FirestoreService {
   /// Get a single member by document ID or member ID
   Future<Member?> getMemberById(String idOrDocId) async {
     try {
-      final doc = await _firestore.collection('members').doc(idOrDocId).get();
+      final doc = await _firestore
+          .collection('members')
+          .doc(idOrDocId)
+          .get()
+          .timeout(const Duration(seconds: 6));
       if (doc.exists) {
         return Member.fromFirestore(doc);
       }
@@ -135,7 +145,8 @@ class FirestoreService {
           .collection('members')
           .where('memberId', isEqualTo: idOrDocId)
           .limit(1)
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 6));
       if (query.docs.isNotEmpty) {
         return Member.fromFirestore(query.docs.first);
       }
@@ -157,7 +168,10 @@ class FirestoreService {
     }
 
     try {
-      final member = await getCurrentMember();
+      final member = await getCurrentMember().timeout(
+        const Duration(seconds: 4),
+        onTimeout: () => null,
+      );
       final name = (member != null && member.fullName.trim().isNotEmpty)
           ? member.fullName.trim()
           : (user.displayName?.isNotEmpty == true
@@ -199,12 +213,15 @@ class FirestoreService {
         if (isBase64) {
           final folder = key == 'profileUrl' ? 'profile' : 'signature';
 
-          // 1. First, attempt upload to Firebase Storage
+          // 1. First, attempt upload to Firebase Storage with timeout
           try {
             final storageUrl = await StorageService().uploadBase64IfApplicable(
               memberId: idForStorage,
               base64OrUrl: str,
               folder: folder,
+            ).timeout(
+              const Duration(seconds: 12),
+              onTimeout: () => null,
             );
             if (storageUrl != null && storageUrl.isNotEmpty && storageUrl.startsWith('http')) {
               clean[key] = storageUrl;
@@ -238,7 +255,10 @@ class FirestoreService {
   Future<String> addMember(Member member, {String? customActorName}) async {
     try {
       final payload = await _sanitizeMemberPayload(member.toMap(), memberId: member.memberId);
-      final docRef = await _firestore.collection('members').add(payload);
+      final docRef = await _firestore
+          .collection('members')
+          .add(payload)
+          .timeout(const Duration(seconds: 12));
 
       // Record activity log with exact requested schema
       try {
@@ -296,15 +316,19 @@ class FirestoreService {
         await _firestore
             .collection('members')
             .doc(member.id)
-            .update(cleanPayload);
+            .update(cleanPayload)
+            .timeout(const Duration(seconds: 12));
       } else {
         final snapshot = await _firestore
             .collection('members')
             .where('memberId', isEqualTo: member.memberId)
             .limit(1)
-            .get();
+            .get()
+            .timeout(const Duration(seconds: 8));
         if (snapshot.docs.isNotEmpty) {
-          await snapshot.docs.first.reference.update(cleanPayload);
+          await snapshot.docs.first.reference
+              .update(cleanPayload)
+              .timeout(const Duration(seconds: 12));
         }
       }
 
@@ -354,10 +378,14 @@ class FirestoreService {
   }) async {
     try {
       final normalizedRole = role.toLowerCase().trim();
-      await _firestore.collection('members').doc(docId).update({
-        'role': normalizedRole,
-        'updatedAt': DateTime.now().toIso8601String(),
-      });
+      await _firestore
+          .collection('members')
+          .doc(docId)
+          .update({
+            'role': normalizedRole,
+            'updatedAt': DateTime.now().toIso8601String(),
+          })
+          .timeout(const Duration(seconds: 12));
 
       // Record activity log
       try {
@@ -390,15 +418,22 @@ class FirestoreService {
   Future<void> deleteMember(Member member, {String? customActorName}) async {
     try {
       if (member.id.isNotEmpty) {
-        await _firestore.collection('members').doc(member.id).delete();
+        await _firestore
+            .collection('members')
+            .doc(member.id)
+            .delete()
+            .timeout(const Duration(seconds: 12));
       } else if (member.memberId.isNotEmpty) {
         final snapshot = await _firestore
             .collection('members')
             .where('memberId', isEqualTo: member.memberId)
             .limit(1)
-            .get();
+            .get()
+            .timeout(const Duration(seconds: 8));
         if (snapshot.docs.isNotEmpty) {
-          await snapshot.docs.first.reference.delete();
+          await snapshot.docs.first.reference
+              .delete()
+              .timeout(const Duration(seconds: 12));
         }
       }
 
@@ -519,7 +554,10 @@ class FirestoreService {
   /// Record an ActivityLog entry to activity_logs collection
   Future<void> logActivity(ActivityLog log) async {
     try {
-      await _firestore.collection('activity_logs').add(log.toMap());
+      await _firestore
+          .collection('activity_logs')
+          .add(log.toMap())
+          .timeout(const Duration(seconds: 6));
     } catch (e) {
       debugPrint('Error writing activity log: $e');
     }
