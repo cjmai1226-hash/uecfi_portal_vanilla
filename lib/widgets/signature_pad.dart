@@ -100,6 +100,51 @@ class _SignaturePadState extends State<SignaturePad> {
   Future<Uint8List?> exportPngBytes() async {
     if (isEmpty) return null;
     try {
+      // 1. Calculate bounding box of all strokes
+      double minX = double.infinity;
+      double minY = double.infinity;
+      double maxX = double.negativeInfinity;
+      double maxY = double.negativeInfinity;
+
+      for (final stroke in _strokes) {
+        for (final pt in stroke) {
+          if (pt.dx < minX) minX = pt.dx;
+          if (pt.dy < minY) minY = pt.dy;
+          if (pt.dx > maxX) maxX = pt.dx;
+          if (pt.dy > maxY) maxY = pt.dy;
+        }
+      }
+
+      if (!minX.isInfinite && !minY.isInfinite && maxX > minX && maxY > minY) {
+        // Add comfortable padding around the signature strokes
+        const double padding = 16.0;
+        final double width = (maxX - minX) + (padding * 2);
+        final double height = (maxY - minY) + (padding * 2);
+
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
+
+        // Translate to origin + padding (DO NOT fill background -> 100% transparent PNG)
+        canvas.translate(-minX + padding, -minY + padding);
+
+        // Render strokes in official dark ink
+        final painter = _SignaturePainter(
+          strokes: _strokes,
+          strokeColor: const Color(0xFF0F172A),
+          strokeWidth: widget.strokeWidth,
+        );
+        painter.paint(canvas, Size(width, height));
+
+        final picture = recorder.endRecording();
+        final image = await picture.toImage(width.ceil(), height.ceil());
+        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+        final bytes = byteData?.buffer.asUint8List();
+        if (bytes != null && bytes.isNotEmpty) {
+          return bytes;
+        }
+      }
+
+      // Fallback to repaint boundary if bounding calculation is unavailable
       final boundary = _boundaryKey.currentContext?.findRenderObject()
           as RenderRepaintBoundary?;
       if (boundary == null) return null;
@@ -118,102 +163,100 @@ class _SignaturePadState extends State<SignaturePad> {
     final strokeColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final borderColor = isDark ? const Color(0xFF262633) : const Color(0xFFE5E5ED);
 
-    final canvasBox = RepaintBoundary(
-      key: _boundaryKey,
-      child: Container(
-        height: widget.height,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF16161F) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: borderColor,
-            width: 1.2,
-          ),
+    final canvasBox = Container(
+      height: widget.height,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF16161F) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: borderColor,
+          width: 1.2,
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Stack(
-            children: [
-              // Signature baseline guide
-              Positioned(
-                bottom: 40,
-                left: 24,
-                right: 24,
-                child: Row(
-                  children: [
-                    Text(
-                      '✕',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.25)
-                            : Colors.black.withValues(alpha: 0.25),
-                      ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          children: [
+            // Signature baseline guide (display only, not captured in export)
+            Positioned(
+              bottom: 40,
+              left: 24,
+              right: 24,
+              child: Row(
+                children: [
+                  Text(
+                    '✕',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.25)
+                          : Colors.black.withValues(alpha: 0.25),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Container(
-                        height: 1,
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.15)
-                            : Colors.black.withValues(alpha: 0.12),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      height: 1,
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.15)
+                          : Colors.black.withValues(alpha: 0.12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Prompt when empty (display only, not captured in export)
+            if (isEmpty)
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.draw_rounded,
+                      size: 32,
+                      color: (isDark ? Colors.white54 : Colors.black45)
+                          .withValues(alpha: 0.4),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Sign here using your finger or stylus',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: (isDark ? Colors.white54 : Colors.black45)
+                            .withValues(alpha: 0.6),
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
                   ],
                 ),
               ),
 
-              // Prompt when empty
-              if (isEmpty)
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.draw_rounded,
-                        size: 32,
-                        color: (isDark ? Colors.white54 : Colors.black45)
-                            .withValues(alpha: 0.4),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Sign here using your finger or stylus',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: (isDark ? Colors.white54 : Colors.black45)
-                              .withValues(alpha: 0.6),
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              // Drawing Canvas with Pan Gestures
-              GestureDetector(
-                onPanStart: (details) {
-                  final box = context.findRenderObject() as RenderBox?;
-                  if (box == null) return;
-                  final local = details.localPosition;
-                  setState(() {
-                    _currentStroke = [local];
-                    _strokes.add(_currentStroke);
-                  });
-                  widget.onDrawStart?.call();
-                  widget.onEmptyChanged?.call(false);
-                },
-                onPanUpdate: (details) {
-                  final local = details.localPosition;
-                  setState(() {
-                    _currentStroke.add(local);
-                  });
-                },
-                onPanEnd: (details) {
-                  widget.onDrawEnd?.call();
-                  widget.onEmptyChanged?.call(isEmpty);
-                },
+            // Drawing Canvas with Pan Gestures & Transparent RepaintBoundary
+            GestureDetector(
+              onPanStart: (details) {
+                final local = details.localPosition;
+                setState(() {
+                  _currentStroke = [local];
+                  _strokes.add(_currentStroke);
+                });
+                widget.onDrawStart?.call();
+                widget.onEmptyChanged?.call(false);
+              },
+              onPanUpdate: (details) {
+                final local = details.localPosition;
+                setState(() {
+                  _currentStroke.add(local);
+                });
+              },
+              onPanEnd: (details) {
+                widget.onDrawEnd?.call();
+                widget.onEmptyChanged?.call(isEmpty);
+              },
+              child: RepaintBoundary(
+                key: _boundaryKey,
                 child: CustomPaint(
                   painter: _SignaturePainter(
                     strokes: _strokes,
@@ -223,8 +266,8 @@ class _SignaturePadState extends State<SignaturePad> {
                   size: Size.infinite,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -94,7 +94,10 @@ class ImageUtils {
   }
 
   /// Compresses a signature image to fit within [maxWidth] x [maxHeight]
-  /// and maintains transparent PNG format or crisp JPEG.
+  /// and ensures a clean, 100% transparent PNG format.
+  /// If the uploaded image has a solid white or light paper background (e.g. from camera
+  /// photo of paper or non-transparent JPEG/PNG), it automatically converts the paper
+  /// background into alpha transparency while keeping the ink strokes crisp.
   static Future<Uint8List> compressSignature(
     Uint8List inputBytes, {
     int maxWidth = 600,
@@ -115,8 +118,54 @@ class ImageUtils {
           );
         }
 
-        // Use PNG with level 6 compression to preserve transparency if available
-        final encoded = img.encodePng(resized, level: 6);
+        // Check if image already has transparent pixels
+        bool alreadyHasAlpha = false;
+        if (resized.hasAlpha) {
+          int transparentCount = 0;
+          for (final pixel in resized) {
+            if (pixel.a < 180) {
+              transparentCount++;
+              if (transparentCount > 20) {
+                alreadyHasAlpha = true;
+                break;
+              }
+            }
+          }
+        }
+
+        img.Image finalImage = resized;
+
+        // If the uploaded signature has a solid white or light paper background,
+        // convert the paper background to 100% transparent PNG
+        if (!alreadyHasAlpha) {
+          final transparentImg = resized.numChannels < 4
+              ? resized.convert(numChannels: 4)
+              : resized;
+
+          for (final p in transparentImg) {
+            final r = p.r;
+            final g = p.g;
+            final b = p.b;
+            // Standard perceptual luminance formula
+            final lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+            if (lum >= 210) {
+              // Pure white or light paper background -> completely transparent
+              p.a = 0;
+            } else if (lum > 150) {
+              // Smooth feathering between paper and ink stroke edges
+              final alpha = ((210 - lum) / 60.0 * 255).clamp(0, 255).toInt();
+              p.a = alpha;
+            } else {
+              // Dark ink stroke -> fully opaque
+              p.a = 255;
+            }
+          }
+          finalImage = transparentImg;
+        }
+
+        // Use PNG with level 6 compression to preserve full transparency
+        final encoded = img.encodePng(finalImage, level: 6);
         return Uint8List.fromList(encoded);
       });
     } catch (e) {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -26,11 +27,28 @@ class MemberDetailsScreen extends StatefulWidget {
 class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
   late Member _currentMember;
   List<Member> _allMembers = [];
+  Member? _loggedInMember;
+  StreamSubscription<Member?>? _authMemberSub;
 
   @override
   void initState() {
     super.initState();
     _currentMember = widget.member;
+    _authMemberSub = FirestoreService().getCurrentMemberStream().listen((member) {
+      if (mounted) {
+        setState(() {
+          _loggedInMember = member;
+        });
+      }
+    });
+    FirestoreService().getCurrentMember().then((member) {
+      if (mounted && _loggedInMember == null) {
+        setState(() {
+          _loggedInMember = member;
+        });
+      }
+    }).catchError((_) {});
+
     if (widget.allMembers != null && widget.allMembers!.isNotEmpty) {
       _allMembers = widget.allMembers!;
     } else {
@@ -42,6 +60,12 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
         }
       }).catchError((_) {});
     }
+  }
+
+  @override
+  void dispose() {
+    _authMemberSub?.cancel();
+    super.dispose();
   }
 
   void _confirmDeleteMember(BuildContext context) {
@@ -185,7 +209,7 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.85),
-      builder: (context) {
+      builder: (dialogCtx) {
         return Dialog(
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -244,7 +268,7 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
                         icon: HugeIcons.strokeRoundedCancel01,
                         size: 20,
                       ),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => Navigator.of(dialogCtx).pop(),
                       tooltip: 'Close',
                     ),
                   ],
@@ -254,7 +278,7 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
               // Image Area with Zoom / Pan (InteractiveViewer)
               Container(
                 constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.65,
+                  maxHeight: MediaQuery.of(dialogCtx).size.height * 0.65,
                   maxWidth: double.infinity,
                 ),
                 decoration: BoxDecoration(

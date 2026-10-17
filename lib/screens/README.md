@@ -7,7 +7,6 @@ This folder contains the **full-page views, routes, and UI screens** that users 
 
 Screens are grouped by domain / feature modules:
 
-- **`admin/`**: Administrative screens (`activity_logs_screen.dart`, `role_management_screen.dart`).
 - **`auth/`**: Authentication & account access (`login_screen.dart`).
 - **`centers/`**: Worship centers and local church details (`center_details_screen.dart`).
 - **`finance/`**: Financial dashboard, tithes, and reports (`finance_screen.dart`).

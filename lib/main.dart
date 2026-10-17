@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -15,18 +14,10 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   // Configure Firestore cache:
-  // On Windows desktop, offline persistence causes C++ LevelDB crashes/deadlocks during writes/updates.
-  // We disable persistence on Windows to ensure instantaneous, reliable Firestore operations.
-  final isWindows = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
-  if (isWindows) {
-    try {
-      await FirebaseFirestore.instance.clearPersistence();
-    } catch (_) {}
-  }
   try {
-    FirebaseFirestore.instance.settings = Settings(
-      persistenceEnabled: !isWindows,
-      cacheSizeBytes: isWindows ? Settings.CACHE_SIZE_UNLIMITED : 100 * 1024 * 1024,
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: 100 * 1024 * 1024,
     );
   } catch (e) {
     debugPrint('Firestore settings note: $e');

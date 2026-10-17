@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart';
-import '../firebase_options.dart';
+import 'package:flutter/material.dart';
 
 class StorageService {
   static final StorageService _instance = StorageService._internal();
@@ -12,58 +10,6 @@ class StorageService {
   StorageService._internal();
 
   final FirebaseStorage _storage = FirebaseStorage.instance;
-
-  /// Attempts a direct HTTP REST upload to Firebase Storage.
-  /// On Windows desktop, this bypasses native C++ progress callback crashes and deadlocks.
-  Future<String?> _tryRestUpload({
-    required String path,
-    required Uint8List bytes,
-    required String mimeType,
-  }) async {
-    HttpClient? client;
-    try {
-      final bucket = DefaultFirebaseOptions.windows.storageBucket;
-      if (bucket == null || bucket.isEmpty) return null;
-
-      final encodedPath = Uri.encodeComponent(path);
-      final uri = Uri.parse(
-        'https://firebasestorage.googleapis.com/v0/b/$bucket/o?uploadType=media&name=$encodedPath',
-      );
-
-      client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
-      final request = await client.postUrl(uri);
-      request.headers.set('Content-Type', mimeType);
-
-      // Attach Firebase Auth ID token if available
-      try {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          final idToken = await user.getIdToken();
-          if (idToken != null && idToken.isNotEmpty) {
-            request.headers.set('Authorization', 'Bearer $idToken');
-          }
-        }
-      } catch (_) {}
-
-      request.add(bytes);
-      final response = await request.close().timeout(const Duration(seconds: 10));
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final responseBody = await response.transform(utf8.decoder).join();
-        final json = jsonDecode(responseBody) as Map<String, dynamic>;
-        final downloadTokens = json['downloadTokens']?.toString() ?? '';
-        final tokenParam = downloadTokens.isNotEmpty ? '&token=${downloadTokens.split(',').first}' : '';
-        client.close();
-        return 'https://firebasestorage.googleapis.com/v0/b/$bucket/o/$encodedPath?alt=media$tokenParam';
-      }
-      client.close();
-    } catch (e) {
-      debugPrint('REST upload fallback note: $e');
-    } finally {
-      client?.close();
-    }
-    return null;
-  }
 
   /// Uploads raw or compressed image bytes to Firebase Storage
   /// Returns the public HTTPS download URL or null on failure/timeout
@@ -78,19 +24,6 @@ class StorageService {
       final cleanMemberId = memberId.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
       final path = 'members/$cleanMemberId/$folder.$ext';
 
-      // 1. On Windows desktop, try REST upload first to avoid native C++ progress callback crashes/hangs
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
-        final restUrl = await _tryRestUpload(
-          path: path,
-          bytes: bytes,
-          mimeType: mimeType,
-        );
-        if (restUrl != null && restUrl.isNotEmpty) {
-          return restUrl;
-        }
-      }
-
-      // 2. Attempt standard FirebaseStorage with strict timeouts
       final ref = _storage.ref().child(path);
       final metadata = SettableMetadata(
         contentType: mimeType,
@@ -101,12 +34,12 @@ class StorageService {
       );
 
       final uploadTask = await ref.putData(bytes, metadata).timeout(
-        const Duration(seconds: 8),
-        onTimeout: () => throw TimeoutException('Storage putData timed out after 8s'),
+        const Duration(seconds: 12),
+        onTimeout: () => throw TimeoutException('Storage putData timed out after 12s'),
       );
       final downloadUrl = await uploadTask.ref.getDownloadURL().timeout(
-        const Duration(seconds: 5),
-        onTimeout: () => throw TimeoutException('Storage getDownloadURL timed out after 5s'),
+        const Duration(seconds: 8),
+        onTimeout: () => throw TimeoutException('Storage getDownloadURL timed out after 8s'),
       );
       return downloadUrl;
     } catch (e) {

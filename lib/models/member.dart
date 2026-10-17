@@ -540,6 +540,9 @@ class Member {
   static ImageProvider? _buildImageProvider(String rawUrl) {
     final url = rawUrl.trim();
     if (url.isEmpty || url == 'N/A') return null;
+    if (url.startsWith('assets/')) {
+      return AssetImage(url);
+    }
     if (url.startsWith('data:image') || !url.startsWith('http')) {
       try {
         final raw = url.contains(',') ? url.split(',').last : url;
@@ -650,7 +653,7 @@ class Member {
       firstName: map['firstName']?.toString() ?? '',
       middleName: map['middleName']?.toString() ?? '',
       lastName: map['lastName']?.toString() ?? '',
-      dob: map['dob']?.toString() ?? '',
+      dob: _extractDob(map),
       gender: map['gender']?.toString() ?? 'Male',
       civilStatus: map['civilStatus']?.toString() ?? 'Single',
       category: map['category']?.toString() ?? 'Adult',
@@ -679,6 +682,27 @@ class Member {
       createdAt: map['createdAt']?.toString() ?? '',
       updatedAt: map['updatedAt']?.toString() ?? '',
     );
+  }
+
+  static String _extractDob(Map<String, dynamic> map) {
+    final rawVal = map['dob'] ??
+        map['dateOfBirth'] ??
+        map['birthDate'] ??
+        map['birthdate'] ??
+        map['birthday'];
+    if (rawVal == null) return '';
+    if (rawVal is Timestamp) {
+      final dt = rawVal.toDate();
+      final month = dt.month.toString().padLeft(2, '0');
+      final day = dt.day.toString().padLeft(2, '0');
+      return '${dt.year}-$month-$day';
+    }
+    if (rawVal is DateTime) {
+      final month = rawVal.month.toString().padLeft(2, '0');
+      final day = rawVal.day.toString().padLeft(2, '0');
+      return '${rawVal.year}-$month-$day';
+    }
+    return rawVal.toString().trim();
   }
 
   Map<String, dynamic> toMap() {

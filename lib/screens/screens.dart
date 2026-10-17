@@ -1,8 +1,5 @@
 // Barrel export file for all screens in the application
 
-// Admin
-export 'admin/activity_logs_screen.dart';
-export 'admin/role_management_screen.dart';
 
 // Auth
 export 'auth/login_screen.dart';

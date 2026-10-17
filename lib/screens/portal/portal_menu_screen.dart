@@ -6,47 +6,13 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/theme.dart';
 import '../../widgets/legal_about_sheet.dart';
-import '../admin/activity_logs_screen.dart';
 import 'constitution_bylaws_screen.dart';
 import '../posts/create_post_screen.dart';
 import 'forms_templates_screen.dart';
-import '../admin/role_management_screen.dart';
 import '../transfers/transfer_requests_screen.dart';
 
 class PortalMenuScreen extends StatelessWidget {
   const PortalMenuScreen({super.key});
-
-  void _showDataManagementStatus(BuildContext context) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            AppIcon(
-              icon: HugeIcons.strokeRoundedCheckmarkCircle02,
-              color: Colors.white,
-              size: 20,
-            ),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Cloud storage sync is active. All member media is optimized in Firebase Cloud Storage.',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13.5,
-                ),
-              ),
-            ),
-          ],
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF00C853),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(seconds: 4),
-      ),
-    );
-  }
 
   void _showThemeDialog(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -190,9 +156,8 @@ class PortalMenuScreen extends StatelessWidget {
         final isDistrictAdmin = currentMember?.isDistrictAdmin ??
             (userRole == 'district' || userRole == 'district_admin' || userRole == 'district admin');
         final canCreateDistrictPosts = isAdmin || isDistrictAdmin;
-        final canViewActivityLogs = isAdmin || isDistrictAdmin;
         final canManageTransfers = isAdmin || isDistrictAdmin;
-        final canAccessAdminTools = canCreateDistrictPosts || canViewActivityLogs || canManageTransfers || isAdmin;
+        final canAccessAdminTools = canCreateDistrictPosts || canManageTransfers;
         final roleDisplayName = currentMember?.roleDisplayName ?? (isAdmin ? 'Administrator' : (isDistrictAdmin ? 'District Admin' : 'Member'));
 
         final fullName = currentMember != null && currentMember.fullName.trim().isNotEmpty
@@ -346,23 +311,8 @@ class PortalMenuScreen extends StatelessWidget {
                       },
                     ),
                   ],
-                  if (canViewActivityLogs) ...[
-                    if (canCreateDistrictPosts) _buildDivider(borderColor),
-                    _buildMenuItem(
-                      title: 'Activity Logs',
-                      subtitle: 'System audit trails and member records event history',
-                      textPrimary: textPrimary,
-                      textSecondary: textSecondary,
-                      icon: HugeIcons.strokeRoundedAudit01,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const ActivityLogsScreen()),
-                        );
-                      },
-                    ),
-                  ],
                   if (canManageTransfers) ...[
-                    if (canCreateDistrictPosts || canViewActivityLogs) _buildDivider(borderColor),
+                    if (canCreateDistrictPosts) _buildDivider(borderColor),
                     StreamBuilder<int>(
                       stream: FirestoreService().getPendingTransfersCountStream(),
                       builder: (context, countSnapshot) {
@@ -397,30 +347,6 @@ class PortalMenuScreen extends StatelessWidget {
                           },
                         );
                       },
-                    ),
-                  ],
-                  if (isAdmin) ...[
-                    if (canCreateDistrictPosts || canViewActivityLogs) _buildDivider(borderColor),
-                    _buildMenuItem(
-                      title: 'Role Management',
-                      subtitle: 'View administrative users and manage member roles',
-                      textPrimary: textPrimary,
-                      textSecondary: textSecondary,
-                      icon: HugeIcons.strokeRoundedUserShield01,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const RoleManagementScreen()),
-                        );
-                      },
-                    ),
-                    _buildDivider(borderColor),
-                    _buildMenuItem(
-                      title: 'Data Management',
-                      subtitle: 'Cloud storage synchronized & database optimized',
-                      textPrimary: textPrimary,
-                      textSecondary: textSecondary,
-                      icon: HugeIcons.strokeRoundedDatabaseSync01,
-                      onTap: () => _showDataManagementStatus(context),
                     ),
                   ],
                   const SizedBox(height: 24),
